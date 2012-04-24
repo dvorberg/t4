@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+          "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML lang="en">
+  <HEAD>
+    <TITLE>Add ORM2 Pool</TITLE>
+  </HEAD>
+  <BODY BGCOLOR="#FFFFFF" LINK="#000099" VLINK="#555555">
+    <H2>Add ORM2 Pool</H2>
+
+    <dtml-var "HelpSys.HelpButton('DTML-DocumentOrMethod_Add.stx','OFSP')">
+
+    <FORM ACTION="manage_addorm2_pool" METHOD="POST"
+          ENCTYPE="multipart/form-data">
+      <TABLE CELLSPACING="2">
+        <TR>
+          <TH ALIGN="LEFT" VALIGN="TOP">Id</TH>
+          <TD ALIGN="LEFT" VALIGN="TOP">
+            <INPUT TYPE="TEXT" NAME="id" SIZE="40">
+          </TD>
+        </TR>
+        <TR>
+          <TH ALIGN="LEFT" VALIGN="TOP"><EM>Title</EM></TH>
+          <TD ALIGN="LEFT" VALIGN="TOP">
+            <INPUT TYPE="TEXT" NAME="title" SIZE="40">
+          </TD>
+        </TR>
+        <TR>
+          <TH ALIGN="LEFT" VALIGN="TOP"><EM>DA id</EM></TH>
+          <TD ALIGN="LEFT" VALIGN="TOP">
+            <INPUT TYPE="TEXT" NAME="da_id" SIZE="40">
+          </TD>
+        </TR>
+        <TR>
+          <TD></TD>
+          <TD>
+            <INPUT TYPE="SUBMIT" VALUE=" Add ">
+          </TD>
+        </TR>
+      </TABLE>
+    </FORM>
+  </BODY>
+</HTML>
+

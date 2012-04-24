@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+          "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML lang="en">
+  <HEAD>  
+    <TITLE>Edit a ORM2 Pool</TITLE>
+  </HEAD>
+  <BODY BGCOLOR="#FFFFFF" LINK="#000099" VLINK="#555555">
+    <dtml-var manage_tabs>
+
+    <FORM ACTION="manage_edit" METHOD="POST">
+      <TABLE CELLSPACING="2">
+        <TR>
+	      <TD ALIGN="LEFT" VALIGN="TOP">Id</TD>
+	      <TD ALIGN="LEFT" VALIGN="TOP"><dtml-var id></TD>
+        </TR>
+        <TR>
+	      <TD ALIGN="LEFT" VALIGN="TOP"><EM>Title</EM></TD>
+	      <TD ALIGN="LEFT" VALIGN="TOP">
+	        <dtml-if title>
+	          <INPUT TYPE="TEXT" NAME="title" SIZE="40" VALUE="&dtml-title;">
+            <dtml-else title>
+	          <INPUT TYPE="TEXT" NAME="title" SIZE="40" VALUE="">
+	        </dtml-if title>
+	      </TD>
+        </TR>
+        <TR>
+          <TH ALIGN="LEFT" VALIGN="TOP"><EM>DA id</EM></TH>
+          <TD ALIGN="LEFT" VALIGN="TOP">
+	        <dtml-if da_id>
+	          <INPUT TYPE="TEXT" NAME="da_id" SIZE="40" VALUE="&dtml-da_id;">
+            <dtml-else da_id>
+	          <INPUT TYPE="TEXT" NAME="da_id" SIZE="40" VALUE="">
+	        </dtml-if da_id>
+          </TD>
+        </TR>
+        <TR>
+	      <TD ALIGN="LEFT" VALIGN="TOP">
+            <EM>Last modified</EM>
+          </TD>
+	      <TD ALIGN="LEFT" VALIGN="TOP">
+            <dtml-var bobobase_modification_time>
+	      </TD>
+        </TR>
+        <TR>
+          <TD>
+          </TD>
+          <TD ALIGN="LEFT">
+            <INPUT NAME="SUBMIT" TYPE="SUBMIT" VALUE="Change">
+	      </TD>
+        </TR>
+      </TABLE>
+    </FORM>
+  </BODY>
+</HTML>
+
