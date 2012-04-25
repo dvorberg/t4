@@ -30,7 +30,7 @@ def parse_options():
     add = parser.add_option
     
     add("-r", None, dest="resolution", default="300x300",
-        help=("Resolution in which the input files are processed "
+        help=("Resolution in which intermediate files are created "
               "(DPI or DPIxDPI)"))
     add("-v", "--verbose", dest="verbose", default=False, action="store_true",
         help="Make the script say what's going on.")
@@ -42,6 +42,8 @@ def parse_options():
         help="Output paper size. Defaults to a5 (portrait).")
     add("-m", "--margin", dest="margin", default="0",
         help="Space to leave blank around the split images on each page.")
+    add("-g", "--gs", dest="gs", default=None,
+        help="Name of the Ghostscript executable. (GS 8.7 prefered!)")
     
     opts, args = parser.parse_args()
 
@@ -68,7 +70,7 @@ outfile_re = re.compile(r".*?out(\d+)\.eps")
 def create_temporary_files(tmpdir, infilename, options):
     print >> log, "Creating temporary EPS files from", infilename    
 
-    cmd = [ "gs", "-dNOPAUSE", "-dBATCH",
+    cmd = [ options.gs, "-dNOPAUSE", "-dBATCH",
             "-r" + resolution_string(options),
             "-sDEVICE=epswrite", "-dUseCropBox",
             "-sOutputFile=%s/out%%d.eps" % tmpdir,
@@ -129,13 +131,14 @@ class pages_image:
             self.eps_image = eps_image(page,
                                        open(self.filename),
                                        document_level=False)
-            
+
         canvas = page.canvas(margin=margin)
 
         imagew, imageh = self.eps_image.w() / 2, self.eps_image.h()
 
         if imagew == 0.0 or imageh == 0.0:
             # An empty page? GS 9 seems to create these.
+            # An empty page?
             return
         
         # Scale the image to the canvas height
@@ -175,12 +178,12 @@ def papersize_string(options):
 
 def run_result_through_postscript(infilename, outfilename,
                                   document, options):
-
     # "-dDetectDuplicateImages", seems to be on by default or taken care of
     # by setting document_level=True for the images.
-    cmd = [ "gs", "-dNOPAUSE", "-dBATCH",
-            "-r" + resolution_string(options),
-            "-sDEVICE=pdfwrite", 
+    #"-dPDFSETTINGS=/ebook" doesn't seem to do anything.
+    cmd = [ options.gs, "-dNOPAUSE", "-dBATCH",
+            "-r" + resolution_string(options),            
+            "-sDEVICE=pdfwrite",
             "-sPAPERSIZE=%s" % options.papersize,
             "-sOutputFile=%s" % outfilename,
             "-", ]
@@ -250,7 +253,14 @@ def process(tmpdir, infilename, options):
         
     run_result_through_postscript(infilename, outfilename,
                                   document, options)
-    
+
+def command_exists(cmd):
+    fp = os.popen("which " + cmd)
+    result = fp.read()
+    if string.strip(result) == "":
+        return False
+    else:
+        return True
 
 def main():
     options, args = parse_options()
@@ -262,6 +272,14 @@ def main():
         tmpdir = tempfile.mkdtemp()
         print >> log, "Created temporary dir", tmpdir
 
+        if options.gs is None:
+            if command_exists("gs8"):
+                options.gs = "gs8"
+            else:
+                options.gs = "gs"
+
+            print options.gs
+
         infilename = args[0]
         process(tmpdir, infilename, options)
     except Exception, e:
@@ -272,7 +290,7 @@ def main():
             sys.exit(1)
     finally:
         if not options.debug:
-            print >> log, "Deleting", tmpdir
+            print >> log, "\nDeleting", tmpdir
             os.system("rm -R " + tmpdir)
         else:
             print >> log, "NOT deleting", tmpdir
