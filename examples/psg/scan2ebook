@@ -278,8 +278,6 @@ def main():
             else:
                 options.gs = "gs"
 
-            print options.gs
-
         infilename = args[0]
         process(tmpdir, infilename, options)
     except Exception, e:
