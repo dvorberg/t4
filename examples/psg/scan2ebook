@@ -133,6 +133,10 @@ class pages_image:
         canvas = page.canvas(margin=margin)
 
         imagew, imageh = self.eps_image.w() / 2, self.eps_image.h()
+
+        if imagew == 0.0 or imageh == 0.0:
+            # An empty page? GS 9 seems to create these.
+            return
         
         # Scale the image to the canvas height
         contenth = canvas.h()
