@@ -416,8 +416,8 @@ class datetime(datetime_base):
     
     def __convert__(self, value):
         try:
-            return normalize_datetime(value)
-        except TypeError:
+            return normalize_datetime(value) 
+        except TypeError, e:
             raise ValueError("This dbattribute may only be set to "+\
                              "datetime instances of various types, not %s!"%\
                              repr(type(value)))
