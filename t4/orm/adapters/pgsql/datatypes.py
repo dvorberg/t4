@@ -32,9 +32,9 @@ This module implements datatype classes that are specific to PostgreSQL.
 """
 
 # Python
-import sys
-import string
-from types import *
+import sys, string, types
+from uuid import UUID
+
 
 # orm
 from t4 import sql
@@ -80,7 +80,7 @@ class serial(integer):
 
 class bytea_literal(sql.literal):
     def __init__(self, bindata):
-        if type(bindata) != BufferType:
+        if type(bindata) != types.BufferType:
             self.bindata = buffer(bindata)
         else:
             self.bindata = bindata
@@ -119,11 +119,11 @@ class inet(string):
         
 
 def _pair_of_floats(p):
-    if type(p) in ( ListType, TupleType, ):
+    if type(p) in ( types.ListType, types.TupleType, ):
         if len(p) != 2:
             raise ValueError("A point is represented by a pair of floats.")
         p = map(float, p)
-    elif type(p) in ( StringType, UnicodeType, ):
+    elif type(p) in ( types.StringType, types.UnicodeType, ):
         match = point_re.match(p)
         if match is None:
             raise ValueError(p)
@@ -153,3 +153,90 @@ class point(datatype):
             return None
         else:
             return _pair_of_floats(value)
+
+class uuid_literal(sql.literal):
+    def __init__(self, u):
+        if not isinstance(u, UUID):
+            u = UUID(u)
+        self._content = u
+
+    def __sql__(self, runner):
+        return "'" + str(self._content) + "'"
+        
+
+class uuid(datatype):
+    """
+    An interface to PostgreSQL's UUID type based on Python's
+    uuid.UUID.
+    """
+    sql_literal_class = uuid_literal
+
+    def __convert__(self, value):
+        if value is None:
+            return None
+        else:
+            if not isinstance(value, UUID):
+                return UUID(value)
+            else:
+                return valuet4pg_catalog_model
+
+class tsvector_data:
+    def __hash__(self):
+        return hash(repr(self.texts))
+    
+    def __init__(self, configuration_name, texts):
+        self.configuration_name = configuration_name
+        self.texts = texts
+            
+class to_tsvector_expression(sql.expression):
+    def __init__(self, configuration_name, texts):
+        """
+        The dictionary texts goes { "<weight>": "<Text>", ... },
+        <weight> being one of 'A', 'B', 'C', 'D' and <Text> the text
+        to be indexed with that weight.
+        """
+        sql.expression.__init__(self)
+        self._name = "ts_vector"
+
+        for key in texts.keys():
+            if strip(texts[key]) == "":
+                del texts[key]
+        
+        for weight, text in texts.items():
+            if type(text) != types.UnicodeType: text = unicode(text)
+            self._append( ("setweight(",
+                           "  to_tsvector(",
+                           sql.string_literal(configuration_name), ", ",
+                           sql.unicode_literal(text),
+                           "), ", sql.string_literal(upper(weight)), ")",
+                           "||",) )
+        if len(self._parts) > 0:
+            self._parts.pop() # Remove last ||
+            
+
+class tsvector(datatype):
+    """
+    ...both direction and magnitude!
+    """
+    def __set__(self, dbobj, value):
+        if value is not None:            
+            if not isinstance(value, tsvector_data):
+                raise TypeError( "A tsvector dbattribute must be set to a "
+                                 "tsvector_data instance.")
+        
+            self.check_dbobj(dbobj)
+            setattr(dbobj, self.data_attribute_name(), value)
+                         
+    def sql_literal(self, dbobj):
+        data = getattr(dbobj, self.data_attribute_name(), None)
+        if data and data.texts:
+            return to_tsvector_expression(data.configuration_name,
+                                          data.texts)
+        else:
+            return "NULL"
+
+    def __select_this_column__(self):
+        return False
+
+    def __select_after_insert__(self, dbobj):
+        return False
