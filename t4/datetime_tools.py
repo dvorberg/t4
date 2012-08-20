@@ -64,7 +64,7 @@ def normalize_datetime(value):
                                      value.day(),
                                      value.hour(),
                                      value.minute(),
-                                     value.second())
+                                     int(value.second()))
         else:
             return datetime.datetime(value.year,
                                      value.month,
