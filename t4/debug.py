@@ -167,3 +167,18 @@ class _sql(_logstream):
 log = _log()
 debug = _debug()
 sqllog = _sql()
+
+class dont_log_sql:
+    def __enter__(self):
+        self.state = sqllog.verbose
+        sqllog.verbose = False
+
+    def __exit__(self, type, value, traceback):
+        sqllog.verbose = self.state
+
+class do_log_sql:
+    def __enter__(self):
+        pass
+    def __exit__(self, type, value, traceback):
+        pass
+

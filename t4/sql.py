@@ -803,15 +803,18 @@ class delete(statement):
     Encapsulate a DELETE statement.
     """
     
-    def __init__(self, relation, where_clause):
+    def __init__(self, relation, where_clause=None):
         self._relation = relation
         self._where = where_clause
         
     def __sql__(self, runner):
         relation = runner(self._relation)
-        where = runner(self._where)
-        
-        return "DELETE FROM %(relation)s %(where)s" % locals()
+
+        if self._where is not None:
+            where = runner(self._where)        
+            return "DELETE FROM %(relation)s %(where)s" % locals()
+        else:
+            return "DELETE FROM %(relation)s" % locals()
 
 class left_join(clause, expression):
     def __init__(self, relation, *parts):
