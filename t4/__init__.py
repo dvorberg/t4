@@ -26,4 +26,4 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 from t4.utils import *
-from t4.date_and_time_normalization import *
+from t4.datetime_tools import *
