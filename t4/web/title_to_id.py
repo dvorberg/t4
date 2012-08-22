@@ -57,10 +57,10 @@ def asciify(string):
     return temp
 
 
-_reserved_ids = set(splitfields("""
+_reserved_ids = splitfields("""
 image_slots edit set get download id fields downloads image images
 fields slotinfo store get_image has_image tag image_tag
-search translator"""))
+search translator""")
 
 def title_to_id(title):
     """
@@ -89,9 +89,11 @@ def title_to_id(title):
                 
     id = join(parts, "_")
     id = id.encode("ascii", "ignore")
+    id = lower(id)
 
     if id in _reserved_ids:
         id = capitalize(id)
+        print "id (cap) =", repr(id)
     
-    return lower(id)
+    return id
 
