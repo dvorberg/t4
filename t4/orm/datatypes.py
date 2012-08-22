@@ -1007,3 +1007,52 @@ class pickle(datatype):
                 pickled = pickle.dumps(value, self.pickle_protocol)
                 return sql.string_literal(pickled)
     
+class path(datatype):
+    """
+    This datatypes allows to store (ZODB or Unix filesystem) paths in
+    the database.  On the database side, a TEXT column is assumed, on
+    the Python side, a tuple is returned.
+    """
+    
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False):
+        """
+        """
+        datatype.__init__(self, column, title, validators, 
+                         has_default)
+        
+
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method takes care of un-pickling the value stored in the datbase.
+        """
+        value = tuple(split(value, "/"))
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        """
+        if type(value) == UnicodeType:
+            value = str(value)
+            
+        if type(value) == StringType:
+            return split(value, "/")
+        else:
+            return tuple(value)
+
+    def sql_literal(self, dbobj):
+        """
+        This function takes care of converting the Python object into a
+        serialized string representation.
+        """
+        if not self.isset(dbobj):
+            msg = "This attribute has not been retrieved from the database."
+            raise AttributeError(msg)
+        else:        
+            value = getattr(dbobj, self.data_attribute_name())
+
+            if value is None:
+                return sql.NULL
+            else:                
+                return sql.string_literal(join(value, "/"))
+    
