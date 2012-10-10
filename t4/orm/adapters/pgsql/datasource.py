@@ -60,7 +60,7 @@ if dbapi is None:
         dbapi = None
 
 if dbapi is None:
-    raise ImportError()
+    raise ImportError("Couldn't find any PostgreSQL DBI Module to work with.")
 
 # orm
 from t4.debug import sqllog, debug
