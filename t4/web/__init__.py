@@ -26,3 +26,6 @@
 from title_to_id import title_to_id
 from html_length import html_length, html_area
 from typography import *
+
+def js_string_literal(s):
+    return '"' + replace(s, '"', r'\"') + '"'
