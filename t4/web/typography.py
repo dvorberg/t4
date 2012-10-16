@@ -154,3 +154,7 @@ def pretty_bytes(bytes):
         return "%.1f GB" % ( float(bytes) / (1024*1024*1024) )
     else:
         return "%.1f TB" % ( float(bytes) / (1024*1024*1024*1024) )
+
+def normalize_whitespace(s):
+    return " ".join(splitfields(s))
+    
