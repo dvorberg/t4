@@ -724,7 +724,7 @@ class expression(wrapper):
 
     def __copy__(self):
         return expression(self.inside_datatype, self.expression)
-
+    
 class property_group(datatype):
     """
     This datatype will manage several columns of the same datatype

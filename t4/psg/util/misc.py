@@ -235,7 +235,8 @@ def eight_squares(canvas, spacing=mm(6)):
         top -= box_size + spacing
                            
 
-
+class PFBError(Exception): pass
+        
 def pfb2pfa(pfb, pfa):
     """
     Convert a PostScript Type1 font in binary representation (pfb) to
@@ -247,7 +248,7 @@ def pfb2pfa(pfb, pfa):
     while True:
         r = pfb.read(1)
         if ord(r) != 128:
-            raise PFBError("Not a pfb file!")
+            raise PFBError("Not a pfb file! (%s)" % repr(r + pfb.read(50)))
 
         t = ord(pfb.read(1))
 

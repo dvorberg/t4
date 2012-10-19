@@ -39,7 +39,7 @@ def web_color_to_ps_command(color):
     PostScript command appropriate to set that color.
     """
     # Make sure we have a legal color string
-    color = strip(lower(color))
+    color = color.lower().strip()
 
     std_colors = { "white": "ffffff",
                    "black": "000000",

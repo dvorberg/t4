@@ -120,7 +120,8 @@ class html_area:
             return html_size(int(width), int(height))
         except TypeError, ValueError:
             raise ValueError(
-                "A size string must be a size keyword or have the format 100x100")
+                "A size string must be a size keyword or have the "
+                "format 100x100")
 
     def thumb_size(self, maxsize):
         """

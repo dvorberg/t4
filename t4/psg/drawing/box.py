@@ -79,12 +79,18 @@ class box:
         @param clip: Boolean indicating whether the bounding box shall
            establish a clipping path around its bounding box.
         """
-        if isinstance(parent, (box, canvas,)):
+        if parent is None:
+            self.page = None
+            self.document = None
+        elif isinstance(parent, (box, canvas,)):
             self.page = parent.page
-            self.document = parent.page.document
+            self.document = parent.document
         elif isinstance(parent, document.page):
             self.page = parent
             self.document = parent.document
+        elif isinstance(parent, document.document):
+            self.page = None
+            self.document = parent
         else:
             raise ValueError("parent= must be page or box object.")
             
@@ -176,7 +182,10 @@ class box:
         the default) or page (document_level=False) using the page's
         add_resource function.
         """
-        self.page.add_resource(resource, document_level)
+        if self.page:
+            self.page.add_resource(resource, document_level)
+        else:
+            self.document.add_resource(resource)
 
     def write_to(self, fp):
         """
@@ -229,9 +238,8 @@ class textbox(canvas):
         self.set_font(None)
         
     def set_font(self, font, font_size=10, kerning=True,
-                 alignment="left", 
-                 char_spacing=0.0, line_spacing=0, paragraph_spacing=0,
-                 tab_stops=()):
+                 alignment="left", char_spacing=0.0, line_spacing=0,
+                 paragraph_spacing=0, tab_stops=()):
         """
         @param font: A psg.font.font or psg.document.font_wrapper instance.
            If a font instance is provided, the font will be registered with
@@ -262,7 +270,7 @@ class textbox(canvas):
         
         if font is not None:
             if isinstance(font, font_cls):
-                self.font_wrapper = self.page.register_font(font, True)
+                self.font_wrapper = self.document.register_font(font, True)
                 
             elif isinstance(font, document.font_wrapper):
                 self.font_wrapper = font
@@ -285,7 +293,7 @@ class textbox(canvas):
             self.space_width = self.font_wrapper.font.metrics.stringwidth(
                 " ", self.font_size)
             
-    def typeset(self, text):
+    def typeset(self, text, hyphenator=None):
         r"""
         Typeset the text into the text_box. The text must be provided
         as a Unicode(!) string. Paragraphs are delimited by Unix
@@ -302,7 +310,7 @@ class textbox(canvas):
         paragraphs = map(splitfields, paragraphs)
         # Paragraphs is now a list of lists containing words (Unicode strings).
 
-        paragraphs = self.typeset_paragraphs(paragraphs)
+        paragraphs = self.typeset_paragraphs(paragraphs, hyphenator)
 
         if len(paragraphs) > 0:
             paragraphs = map(lambda l: join(l, " "), paragraphs)
@@ -312,7 +320,7 @@ class textbox(canvas):
         else:
             return ""
 
-    def typeset_paragraphs(self, paragraphs):
+    def typeset_paragraphs(self, paragraphs, hyphenator=None):
         """
         @param paragraphs: A list of lists of stripped unicode
            strings to by typeset into the textbox.
@@ -321,14 +329,14 @@ class textbox(canvas):
         while(paragraphs):
             paragraph = car(paragraphs)
             paragraphs = cdr(paragraphs)
-            paragraph = self.typeset_paragraph(paragraph)
+            paragraph = self.typeset_paragraph(paragraph, hyphenator)
             if len(paragraph) != 0:
                 paragraphs.insert(0, paragraph)
                 return paragraphs
 
         return []
 
-    def typeset_paragraph(self, paragraph):
+    def typeset_paragraph(self, paragraph, hyphenator):
         """
         @param paragraph: A list of stripped unicode strings.
         @returns: A list of unicode strings that could not be typeset.
@@ -348,6 +356,38 @@ class textbox(canvas):
                 word_width = self.word_width(word)
 
             if line_width + word_width > self.w():
+                if hyphenator is not None:
+                    syllables = hyphenator(word)
+                    if len(syllables) > 1:
+                        word = []
+                        while syllables:
+                            word.append(car(syllables))
+                            syllables = cdr(syllables)
+
+                            w = join(word, "") + "-"
+                            ww = self.word_width(w)
+
+                            if line_width + ww > self.w():
+                                if len(word) == 1:
+                                    break # Typeset the line and set
+                                          # the word one the next
+                                          # line.
+                                else:
+                                    # Remove the last syllable from the word.
+                                    syllables.insert(0, word.pop())
+
+                                    # Add the fitting syllables + "-" to the
+                                    # current line.
+                                    w = join(word, "") + "-"
+                                    line.append( (w, self.word_width(w),) )
+
+                                    # Add the remaining syllables to the
+                                    # beginning of the paragraph for the
+                                    # next line.
+                                    paragraph = cdr(paragraph)
+                                    paragraph.insert(0, join(syllables, ""))
+                                    break
+
                 self.typeset_line(line)
                 try:
                     self.newline()
@@ -505,7 +545,16 @@ class textbox(canvas):
             l = self._line_cursor
 
         return self.h() - l
-        
+
+    def fit_height(self):
+        """
+        Fit the bounding box of the textbox to the text_height. The
+        last line's first letter will be on 0,0.
+        """
+        if self.h() != self.text_height():
+            print >> self.head, "0 -%f translate %% fit_height" % (
+                self.h() - self.text_height())
+            self._h = self.text_height()
 
 class _eps_image(box):
     """

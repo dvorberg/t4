@@ -39,6 +39,7 @@ from t4.psg.fonts.type1 import type1
 from t4.psg.util import *
 
 def main():
+
     if len(sys.argv) < 3:
         print "Usage: %s <outline file> <metrics file>" % sys.argv[0]
         sys.exit(-1)
@@ -62,14 +63,15 @@ def main():
     page = eps.page
     
     # Register the font with the document
-    font_wrapper = page.register_font(font)
+    #font_wrapper = page.register_font(font)
+    font_wrapper = eps.register_font(font)
     
     # The actual string sits in its own textbox
 
     # width = the width of the string
     width = font.metrics.stringwidth(text, font_size)
     
-    tb = textbox(page, margin, margin, width+5, font_size)
+    tb = textbox(margin, margin, width+5, font_size)
     tb.set_font(font_wrapper, font_size)
     tb.typeset(text)
 
