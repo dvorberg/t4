@@ -30,10 +30,10 @@ Wrapper class for file objects that will emulate a file that contains
 a specified subset of the 'parent' file.
 """
 
-import sys, os
+import sys, os, threading
 from string import *
 from types import *
-
+import cStringIO
 
 
 def subfile(fp, offset, length):
@@ -57,6 +57,8 @@ def subfile(fp, offset, length):
     """
     if hasattr(fp, "fileno"):
         return filesystem_subfile(fp, offset, length)
+    if hasattr(fp, "getvalue"):
+        return stringio_subfile(fp, offset, length)
     else:
         return default_subfile(fp, offset, length)    
 
@@ -73,7 +75,6 @@ class _subfile(file):
 
     def close(self):
         pass
-        #self.parent.close()
 
     def flush(self):
         self.parent.flush()
@@ -229,3 +230,12 @@ class default_subfile(_subfile):
         return _subfile.writelines(self, l)
         self.restore()
 
+class stringio_subfile:
+    def __init__(self, fp, offset, length):
+        self.fp = cStringIO.StringIO(fp.getvalue()[offset:offset+length])
+
+    def write_to(self, fp):
+        fp.write(self.fp.getvalue())
+
+    def __getattr__(self, name):
+        return getattr(self.fp, name)

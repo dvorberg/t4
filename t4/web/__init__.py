@@ -23,9 +23,12 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 
+import json
 from title_to_id import title_to_id
 from html_length import html_length, html_area
 from typography import *
 
 def js_string_literal(s):
-    return '"' + replace(s, '"', r'\"') + '"'
+    return json.dumps(s)
+
+

@@ -132,8 +132,8 @@ class document:
 
     def output_file(self):
         """
-        Return a file pointer in write mode for the pages to write their
-        output to.
+        Return a file pointer in write mode for the pages to write
+        their output to.
         """
         raise NotImplementedError()
 

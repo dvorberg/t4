@@ -1084,12 +1084,15 @@ class dsc_document(document_section, document):
         section.__init__(self, info, empty)
         document.__init__(self, title)
 
+        self._font_wrappers = {}
+        
         if not empty:
+            self.setup_section = setup_section()
             self.append("%!PS-Adobe-3.0\n")
             self.append(header_section())
             self.append(defaults_section())
             self.append(prolog_section())
-            self.append(setup_section())
+            self.append(self.setup_section)
             self.append(pages_section())
             self.append(trailer_section())
 
@@ -1122,7 +1125,6 @@ class dsc_document(document_section, document):
 
     def page(self, page_size="a4", label=None):
         ret = dsc_page(self, page_size, label)
-        self.pages.append(ret)
         return ret
 
     def output_file(self): return self
@@ -1147,6 +1149,7 @@ class dsc_document(document_section, document):
                     if first_byte == 128: # pfb
                         font_file = pfb2pfa_buffer(fp)
                     else:
+                        print repr(first_line)
                         if not first_line.startswith("%!PS-AdobeFont"):
                             raise NotImplementedError("Not a pfa/b file!")
                         else:
@@ -1158,6 +1161,21 @@ class dsc_document(document_section, document):
         else:
             raise NotImplementedError("Fonts other than Type1")
 
+    def register_font(self, font):
+        """
+        This function will register a font with this document and
+        return a font_wrapper object, see document.py. 
+        """
+        if not self._font_wrappers.has_key(font.ps_name):
+            number_of_fonts = len(self._font_wrappers)
+            self.add_font(font)
+            wrapper = font_wrapper(self, -number_of_fonts, font, True)
+            self.setup_section.append(wrapper)
+            self._font_wrappers[font.ps_name] = wrapper
+
+        return self._font_wrappers[font.ps_name]
+
+        
     def name(cls):
         return "dsc_document"
     name = classmethod(name)
@@ -1292,7 +1310,8 @@ class eps_document(dsc_document):
             self.append(header_section())
             self.append(defaults_section())
             self.append(prolog_section())
-            self.append(setup_section())
+            self.setup_section = setup_section()
+            self.append(self.setup_section)
 
             # For convenience an eps document still contains a pages section
             # aliasing the single page it contains.
@@ -1311,6 +1330,8 @@ class eps_document(dsc_document):
 
             self.document_needed_resources = dsc_resource_set()
             self._embed_counter = 0
+
+            self._font_wrappers = {}
 
     def write_to(self, fp):
         found = False
