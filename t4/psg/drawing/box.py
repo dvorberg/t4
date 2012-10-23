@@ -354,10 +354,11 @@ class textbox(canvas):
                 word, word_width = word
             else:
                 word_width = self.word_width(word)
-
+                
             if line_width + word_width > self.w():
                 if hyphenator is not None:
                     syllables = hyphenator(word)
+
                     if len(syllables) > 1:
                         word = []
                         while syllables:
@@ -381,13 +382,50 @@ class textbox(canvas):
                                     w = join(word, "") + "-"
                                     line.append( (w, self.word_width(w),) )
 
-                                    # Add the remaining syllables to the
-                                    # beginning of the paragraph for the
-                                    # next line.
+                                    # Remove the partially rendered word from
+                                    # the paragraph.
                                     paragraph = cdr(paragraph)
-                                    paragraph.insert(0, join(syllables, ""))
-                                    break
+                                    
+                                    # If the remaining word is too
+                                    # wide for the box, we can't just
+                                    # push it to the paragraph and
+                                    # re-loop, we have to render it
+                                    # partial on the next line.
+                                    w = join(syllables, "")
+                                    ww = self.word_width(w)
+                                    if ww > self.w():
+                                        try:
+                                            # Next line...
+                                            self.newline()
 
+                                            # render the remainder of
+                                            # the word, overlapping our
+                                            # right morder if it so be.
+                                            line = [ (w, ww,) ]
+                                            self.typeset_line(line)
+                                        except EndOfBox:
+                                            # Hand the problem back to
+                                            # the caller.
+                                            paragraph.insert(0, w)
+                                    else:
+                                        # Add the remaining syllables to the
+                                        # beginning of the paragraph for the
+                                        # next line.
+                                        paragraph.insert(0, w)
+                                        
+                                    break
+                    else:
+                        if word_width > self.w():
+                            self.typeset_line(line)
+                            try:
+                                self.newline()
+                            except EndOfBox:
+                                paragraph.insert(0, word)
+                                return paragraph
+                            
+                            line = [ (word, word_width,) ]
+                            paragraph = cdr(paragraph)
+                            
                 self.typeset_line(line)
                 try:
                     self.newline()
@@ -401,6 +439,7 @@ class textbox(canvas):
                 line_width += word_width + self.space_width
                 paragraph = cdr(paragraph)
 
+        # Render the last line.
         if len(line) != 0:
             self.typeset_line(line, True)
 
