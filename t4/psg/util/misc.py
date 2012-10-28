@@ -45,6 +45,12 @@ head = car
 def cdr(l): return l[1:]
 tail = cdr
 
+def toppop(l):
+    ret = l[0]
+    del l[0]
+    return ret
+
+
 class line_iterator:
     r"""
     Iterate over the lines in a file. Keep track of the line numbers.
