@@ -156,6 +156,7 @@ class box:
         append a Unix newline to them before adding them to the
         buffer.
         """
+        for_head = str(for_head)
         if len(for_head) > 0 and for_head[-1] not in "\n\t\r ":
             for_head += "\n"
 
@@ -232,6 +233,8 @@ class textbox(canvas):
     A rectengular area on the page you can fill with paragraphs of
     text written in a single font.
     """
+    SOFT_NEWLINE = r"\n"
+
     def __init__(self, parent, x, y, w, h, border=False, clip=False, **kw):
         canvas.__init__(self, parent, x, y, w, h, border, clip)
         self._line_cursor = h
@@ -270,7 +273,7 @@ class textbox(canvas):
         
         if font is not None:
             if isinstance(font, font_cls):
-                self.font_wrapper = self.document.register_font(font, True)
+                self.font_wrapper = self.document.register_font(font)
                 
             elif isinstance(font, document.font_wrapper):
                 self.font_wrapper = font
@@ -349,15 +352,19 @@ class textbox(canvas):
         line_width = 0
         while(paragraph):
             word = car(paragraph)
+            if word == self.SOFT_NEWLINE:
+                if len(line) > 0: self.typeset_line(line)
+                return cdr(paragraph)
 
             if type(word) == types.TupleType:
                 word, word_width = word
             else:
                 word_width = self.word_width(word)
-
+                
             if line_width + word_width > self.w():
                 if hyphenator is not None:
                     syllables = hyphenator(word)
+
                     if len(syllables) > 1:
                         word = []
                         while syllables:
@@ -381,13 +388,50 @@ class textbox(canvas):
                                     w = join(word, "") + "-"
                                     line.append( (w, self.word_width(w),) )
 
-                                    # Add the remaining syllables to the
-                                    # beginning of the paragraph for the
-                                    # next line.
+                                    # Remove the partially rendered word from
+                                    # the paragraph.
                                     paragraph = cdr(paragraph)
-                                    paragraph.insert(0, join(syllables, ""))
-                                    break
+                                    
+                                    # If the remaining word is too
+                                    # wide for the box, we can't just
+                                    # push it to the paragraph and
+                                    # re-loop, we have to render it
+                                    # partial on the next line.
+                                    w = join(syllables, "")
+                                    ww = self.word_width(w)
+                                    if ww > self.w():
+                                        try:
+                                            # Next line...
+                                            self.newline()
 
+                                            # render the remainder of
+                                            # the word, overlapping our
+                                            # right morder if it so be.
+                                            line = [ (w, ww,) ]
+                                            self.typeset_line(line)
+                                        except EndOfBox:
+                                            # Hand the problem back to
+                                            # the caller.
+                                            paragraph.insert(0, w)
+                                    else:
+                                        # Add the remaining syllables to the
+                                        # beginning of the paragraph for the
+                                        # next line.
+                                        paragraph.insert(0, w)
+                                        
+                                    break
+                    else:
+                        if word_width > self.w():
+                            self.typeset_line(line)
+                            try:
+                                self.newline()
+                            except EndOfBox:
+                                paragraph.insert(0, word)
+                                return paragraph
+                            
+                            line = [ (word, word_width,) ]
+                            paragraph = cdr(paragraph)
+                            
                 self.typeset_line(line)
                 try:
                     self.newline()
@@ -401,6 +445,7 @@ class textbox(canvas):
                 line_width += word_width + self.space_width
                 paragraph = cdr(paragraph)
 
+        # Render the last line.
         if len(line) != 0:
             self.typeset_line(line, True)
 
