@@ -26,10 +26,10 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 def rgb(r, g, b):
-    return "%f %f %f setrgbcolor" % ( float(r), float(g), float(b), )
+    return "%f %f %f setrgbcolor " % ( float(r), float(g), float(b), )
 
 def grey(g):
-    return "%f setgray" % float(g)
+    return "%f setgray " % float(g)
 
 gray = grey
     
@@ -60,3 +60,36 @@ def web_color_to_ps_command(color):
 
     return rgb( red / 255.0, green / 255.0, blue / 255.0, )
 
+class color:
+    def __str__(self):
+        return ""
+
+class rgb_color(color):
+    def __init__(self, r, g, b):
+        self.r = r
+        self.g = g
+        self.b = b
+
+    def __str__(self):
+        return rgb(self.r, self.g, self.b)
+
+class grey_color(color):
+    def __init__(self, g):
+        self.g = g
+
+    def __str__(self):
+        return grey(self.g)
+
+class web_color(color):
+    def __init__(self, color_representation):
+        self.color = color_representation
+
+    def __str__(self):
+        return web_color_to_ps_command(self.color)
+
+
+white = grey_color(1.0)
+black = grey_color(0.0)
+
+
+        
