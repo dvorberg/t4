@@ -156,6 +156,7 @@ class box:
         append a Unix newline to them before adding them to the
         buffer.
         """
+        for_head = str(for_head)
         if len(for_head) > 0 and for_head[-1] not in "\n\t\r ":
             for_head += "\n"
 
@@ -232,6 +233,8 @@ class textbox(canvas):
     A rectengular area on the page you can fill with paragraphs of
     text written in a single font.
     """
+    SOFT_NEWLINE = r"\n"
+
     def __init__(self, parent, x, y, w, h, border=False, clip=False, **kw):
         canvas.__init__(self, parent, x, y, w, h, border, clip)
         self._line_cursor = h
@@ -270,7 +273,7 @@ class textbox(canvas):
         
         if font is not None:
             if isinstance(font, font_cls):
-                self.font_wrapper = self.document.register_font(font, True)
+                self.font_wrapper = self.document.register_font(font)
                 
             elif isinstance(font, document.font_wrapper):
                 self.font_wrapper = font
@@ -349,6 +352,9 @@ class textbox(canvas):
         line_width = 0
         while(paragraph):
             word = car(paragraph)
+            if word == self.SOFT_NEWLINE:
+                if len(line) > 0: self.typeset_line(line)
+                return cdr(paragraph)
 
             if type(word) == types.TupleType:
                 word, word_width = word
