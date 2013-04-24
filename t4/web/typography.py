@@ -112,9 +112,9 @@ def pretty_money(m, form=False):
         else:
             negative = False
             
-        cents = int(m*100)
-        euros = (cents - (cents % 100)) / 100
-        cents = cents % 100
+        s = "%.2f" % m
+        euros, cents = map(int, split(s, "."))
+        
         if cents == 0 and not form:
             s = str(euros) + ",—"
         else:
