@@ -49,6 +49,9 @@ class IllegalConnectionString(ORMException):
     This exception indicates a syntax error in a connection string
     """
 
+class IllegalPrimaryKey(ORMException):
+    pass
+
 class NoSuchAttributeOrColumn(ORMException):
     """
     Er... someone used an dbproperty that doesn't exist
