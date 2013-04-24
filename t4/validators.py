@@ -59,6 +59,9 @@ class ValidatorException(Exception):
         self.dbproperty = dbproperty
         self.value = value
 
+    def __str__(self):
+        return self.message # self.__class__.__name__
+
 
 class NotNullError(ValidatorException):
     """
@@ -96,13 +99,15 @@ class DateValidatorException(ValidatorException):
         ValidatorException.__init__(self, msg, dbobj, dbproperty, value)
         self.format = format
         
+class IntValidatorException(ValidatorException):
+    pass
 
 class validator:
     """
     The default validator: It doesn't check anything.
     """
     def check(self, dbobj, dbproperty, value):
-        return True
+        pass
 
 class not_null_validator(validator):
     """
@@ -130,6 +135,26 @@ class not_empty_validator(validator):
                 raise NotEmptyError("%s.%s may not be empty" % tpl,
                                     dbobj, dbproperty, value)
 
+class string_validator(validator):
+    """
+    Makes sure the value is a string.
+    """
+    def check(self, dbobj, dbproperty, value):
+        if type(value) != StringType:
+            raise TypeError("String required.")
+            
+class int_validator(validator):
+    """
+    Makes sure the value is an integer or can be converted to one.
+    """
+    def check(self, dbobj, dbproperty, value):
+        if value is not None:
+            try:
+                int(value)
+            except ValueError:
+                raise IntValidatorException("%s not an integer." % repr(value),
+                                            dbobj, dbproperty, value)
+            
 class length_validator(validator):
     """
     Check an argument value's length. None values will be ignored.
@@ -192,6 +217,9 @@ class re_validator(validator):
             self.re = RE
 
     def check(self, dbobj, dbproperty, value):
+        if value is None:
+            return
+        
         match = self.re.match(value)
 
         if match is None:
