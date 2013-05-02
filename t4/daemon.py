@@ -25,7 +25,14 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os
+import sys, os, os.path
+
+"""
+This module's daemon class is a classic, minimalistic implementation
+of a Unix daemon. The t4daemon.t4daemon class adds t4-specific
+extensions adds t4.debug.logstream based logging and
+optparse.OptionParser based command line handling.
+"""
 
 class daemon:
     """
@@ -35,12 +42,17 @@ class daemon:
 
     I wrote this. -- Diedrich
     """
-    def __init__(self, pidfile, stdin='/dev/null',
-                 stdout='/dev/null', stderr='/dev/null'):
+    def __init__(self, pidfile=None, stdin="/dev/null",
+                 stdout="/dev/null", stderr="/dev/null"):
+        if pidfile is None:
+            me = os.path.basename(sys.argv[0])
+            pidfile = "/var/run/%s.pid" % me
+            
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
         self.pidfile = pidfile
+        self._debug = False
        
     def daemonize(self):
         """
@@ -95,7 +107,7 @@ class daemon:
     def start(self):
         """
         Start the daemon
-        """
+        """        
         # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile,'r')
@@ -110,6 +122,7 @@ class daemon:
             sys.exit(1)
            
         # Start the daemon
+        self.startup()
         self.daemonize()
         self.run()
  
@@ -150,10 +163,55 @@ class daemon:
         """
         self.stop()
         self.start()
- 
+
+    def debug(self):
+        """
+        Set self._debug and call self.run().
+        """
+        self._debug = True
+        self.startup()
+        self.run()
+
+    def init_script(self, cmd=None):
+        """
+        Perform the operation specified by CMD. If CMD is None, take
+        it from sys.argv[1]. If no parameter was specified on the
+        command line, an error message will be issued and the program
+        terminates (sys.exit(255)). Supported commands are:
+
+        start
+        stop
+        restart
+        debug
+
+        'debug' will not background the daemon, but set
+        self._debug=True and call run() in the foreground.
+        """
+        def usage():
+            print >> sys.stderr, "Usage: %s start|stop|restart|debug"%sys.argv
+            sys.exit(255)
+
+        if cmd is None:
+            if len(sys.argv) == 1: usage()
+            cmd = sys.argv[1]
+
+        if cmd == "start": self.start()
+        elif cmd == "stop": self.stop()
+        elif cmd == "restart": self.stop(); self.start()
+        elif cmd == "debug": self.debug()
+        else: usage()
+
+    def startup(self):
+        """
+        This method is called after __init__() is complete and before
+        we're putting ourselves in the background. To implement this
+        method is optional.
+        """
+        
     def run(self):
         """
         You should override this method when you subclass Daemon. It
         will be called after the process has been daemonized by
         start() or restart().
         """
+        raise NotImplementedError("run")
