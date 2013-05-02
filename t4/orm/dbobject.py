@@ -138,7 +138,7 @@ class dbobject(object):
     It contains a number of helper methods which are called like this:
     __help__(). You may safely add db-aware properties, regular properties
     and methods.
-    
+
     @cvar __primary_key__:  The primary key must be either
       - a keys.primary_key instance
       - a tuple of strings indicating attribute (not column!) names of this
@@ -160,7 +160,7 @@ class dbobject(object):
        sql.relation instance.
 
     @cvar __schema__: String containing the name of the schema this dbclass'
-      relatin resides in. 
+      relatin resides in.    
     """
 
     __primary_key__ = "id"

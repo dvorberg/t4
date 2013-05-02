@@ -498,7 +498,7 @@ class column(_part):
         
 class expression:
     """
-    Encapsolate an SQL expression as for example a arithmetic or a
+    Encapsolate an SQL expression like an arithmetic expression or a
     function call.
 
     >>> sql()( expression('COUNT(amount) + ', 10) )
