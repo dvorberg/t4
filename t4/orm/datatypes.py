@@ -53,8 +53,15 @@ _property_counter = 0
 class datatype(property):
     """
     This class encapsulates a dbclass' property (=attribute). It takes
-    care of the SQL column name and the information
-    actually stored in the database/the dbobject.
+    care of the SQL column name and the information actually stored in the
+    database/the dbobject.
+
+    You may set most dbproperties to sql.expression-instances which are
+    included in the generated INSERT or UPDATE statements as-is. On INSERT
+    the corresponding columns will be SELECTed from the database (like
+    AUTO INCREMENT or default= columns), but on UPDATE they will be put
+    in an unset state and raise an exception on access, because we don't
+    know if the value stored in the dbobj still matches the one in the db.
     """
     python_class = None    
     sql_literal_class = None
@@ -127,6 +134,7 @@ class datatype(property):
         try:
             return self._data_attribute_name
         except AttributeError:
+            from exceptions import DatatypeMustBeUsedInClassDefinition
             raise DatatypeMustBeUsedInClassDefinition(self.__class__.__name__)
         
     def __get__(self, dbobj, owner="owner? Like owner of what??"):
@@ -170,16 +178,24 @@ class datatype(property):
         for data retrieved from the RDBMS. See below.
         """
         self.check_dbobj(dbobj)
-        if value is not None: value = self.__convert__(value)
+        
+        if isinstance(value, sql.expression):
+            setattr(dbobj, " expression" + self.data_attribute_name(), value)
+            if self.isset(dbobj):
+                # Remove the current value from the dbobj so we don't
+                # return a value that's not in sync with the database.
+                delattr(dbobj, self.data_attribute_name())
+        else:
+            if value is not None: value = self.__convert__(value)
 
-        for validator in self.validators:
-            validator.check(dbobj, self, value)
+            for validator in self.validators:
+                validator.check(dbobj, self, value)
 
-        old = getattr(dbobj, self.data_attribute_name(), StringType)
-        setattr(dbobj, self.data_attribute_name(), value)
+            old = getattr(dbobj, self.data_attribute_name(), StringType)
+            setattr(dbobj, self.data_attribute_name(), value)
 
-        if dbobj.__is_stored__() and old != value:
-            dbobj.__changed_columns__[self.column] = self
+            if dbobj.__is_stored__() and old != value:
+                dbobj.__changed_columns__[self.column] = self
 
     def __set_from_result__(self, ds, dbobj, value):
         setattr(dbobj, self.data_attribute_name(),
@@ -198,6 +214,12 @@ class datatype(property):
         @returns: True, if this property is set, otherwise... well.. False.
         """
         return hasattr(dbobj, self.data_attribute_name())
+
+    def isexpression(self, dbobj):
+        return hasattr(dbobj, " expression" + self.data_attribute_name())
+
+    def expression(self, dbobj):
+        return getattr(dbobj, " expression" + self.data_attribute_name())
     
     def __convert__(self, value):
         """
@@ -243,7 +265,8 @@ class datatype(property):
         been inserted to pick up information supplied by backend as by SQL
         default values and auto increment columns.
         """
-        return self.has_default and not self.isset(dbobj)
+        return (self.has_default and not self.isset(dbobj)) or \
+            self.isexpression(dbobj)
 
     def __delete__(self, dbobj):
         raise NotImplementedError(
@@ -294,7 +317,8 @@ class string(datatype):
         self.null_on_empty = null_on_empty
 
     def __set__(self, dbobj, value):
-        if value is not None and self.null_on_empty and strip(value) == "" :
+        if not isinstance(value, sql.expression) and \
+           value is not None and self.null_on_empty and strip(value) == "" :
             value = None
         datatype.__set__(self, dbobj, value)
 
@@ -649,6 +673,8 @@ class csv(wrapper):
         return tuple(split(value, self.separator))
 
     def __set__(self, dbobj, value):
+        if isinstance(value, sql.expression):
+            raise TypeError("Can't set csv columns to expressions.")
         value = join(value, self.separator)
         self.inside_datatype.__set__(dbobj, value)
         
