@@ -221,7 +221,7 @@ class datasource_base:
         self._dbconn().commit()
         self._insert_cursor = None
         return cursor
-
+    
     def perform_updates(self, *dbobjs, **kw):
         cursor = kw.get("cursor", None)
         if cursor is None:
@@ -255,6 +255,17 @@ class datasource_base:
         """
         self._dbconn().close()
 
+    def ping(self):
+        """
+        Execute SELECT 1 on the database. If that raises any
+        exception, return false, otherwise return true.
+        """
+        try:
+            self.execute("SELECT 1")
+            return True
+        except:
+            return False
+
     def select(self, dbclass, *clauses):
         """
         SELECT dbobjs from the database, according to clauses.
@@ -277,7 +288,7 @@ class datasource_base:
 
             # GROUP BY clauses receive special treatment (in a good
             # way): If their first and only column (i.e. parameter
-            # passed on creation is a dbclass, it is replaced by the
+            # passed on creation) is a dbclass, it is replaced by the
             # dbclass' columns. This is a shorthand to formulate
             # joins. (And t4.sql can't know about dbclasses).
             if isinstance(clause, sql.group_by) and \
@@ -442,6 +453,9 @@ class datasource_base:
                    property.sql_literal(dbobj) is not None:                
                 sql_columns.append(property.column)
                 sql_values.append(property.sql_literal(dbobj))
+            elif property.isexpression(dbobj):
+                sql_columns.append(property.column)
+                sql_values.append(property.expression(dbobj))                
 
         if len(sql_columns) == 0:
             raise DBObjContainsNoData(
