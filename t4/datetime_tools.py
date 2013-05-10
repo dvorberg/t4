@@ -101,7 +101,10 @@ def normalize_date(value):
     
 # Zope
 try:
-    from DateTime.DateTime import DateTime
+    try:
+        from DateTime.DateTime import DateTime
+    except AttributeError:
+        raise ImportError
     
     def normalize_datetime_zope(value):
         """
