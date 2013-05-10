@@ -864,6 +864,8 @@ class cursor_wrapper:
             command = runner(command)
             params = runner.params
 
+        if params is None: params = ()
+
         print >> sqllog, command, "||", repr(params)
         self._cursor.execute(command, tuple(params))
 
