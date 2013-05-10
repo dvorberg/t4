@@ -245,6 +245,11 @@ class dbobject(object):
             self.__primary_key__ = keys.primary_key(self)
 
 
+    def __register_change__(self, dbproperty):
+        if self.__is_stored__():
+            self._ds.__register_change_of__(self)
+            self.__changed_columns__[dbproperty.column] = dbproperty
+            
     def __perform_updates__(self, update_cursor):
         if len(self.__changed_columns__) == 0:
             return

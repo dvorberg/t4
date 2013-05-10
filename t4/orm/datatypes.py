@@ -194,8 +194,8 @@ class datatype(property):
             old = getattr(dbobj, self.data_attribute_name(), StringType)
             setattr(dbobj, self.data_attribute_name(), value)
 
-            if dbobj.__is_stored__() and old != value:
-                dbobj.__changed_columns__[self.column] = self
+            if old != value:
+                dbobj.__register_change__(self)
 
     def __set_from_result__(self, ds, dbobj, value):
         setattr(dbobj, self.data_attribute_name(),
