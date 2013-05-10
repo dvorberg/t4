@@ -34,6 +34,7 @@ import Globals
 from OFS.SimpleItem import SimpleItem
 
 from t4.orm.adapters.pgsql.datasource import datasource as pgsql_datasource
+from t4.orm.datasource import datasource_base
 
 class _pool:
     def __init__(self, t4orm_pool):
@@ -76,9 +77,10 @@ class _pool:
             self._da.putconn(self._conn)            
             self._conn = None
 
-class _pgsql_pool(_pool, pgsql_datasource):
+class _pgsql_pool(pgsql_datasource, _pool):
     def __init__(self, t4orm_pool):
         _pool.__init__(self, t4orm_pool)
+        datasource_base.__init__(self)
         self.psycopg_version = "2.irgendwas"
             
 manage_addt4orm_pool_form = Globals.DTMLFile(
