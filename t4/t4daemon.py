@@ -77,6 +77,10 @@ class t4daemon(daemon):
 
         # Debug has to be turned on explicitly using -d.
         self.dlog = debug.tee(self.log, debug.logstream())
+        self.dlog.verbose = True
+
+        self.log.timestamp = True
+        self.dlog.timestamp = True
         
     def init_script(self, cmd=None):
         op = self.option_parser()
@@ -162,6 +166,10 @@ class t4orm_daemon(t4daemon):
         self.dsn_env_var_name = dsn_env_var_name
         self._ds = None
         
+    def debug(self):
+        debug.sqllog.verbose = True
+        t4daemon.debug(self)
+        
     def ds(self):
         """
         Return a t4.orm.datasource.datasource instance or None, if no
@@ -170,11 +178,15 @@ class t4orm_daemon(t4daemon):
         if self._ds is None or not self._ds.ping():
             try:
                 self._ds = datasource(self.options.dsn)
+                self.created_new_datasource(self._ds)
             except Exception, e:
                 self.log_traceback()
                 return None
 
         return self._ds
+
+    def created_new_datasource(self, ds):
+        pass
             
         
     def option_parser(self):
