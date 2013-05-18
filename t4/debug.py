@@ -76,7 +76,11 @@ class logstream(object):
             if self.end and self.timestamp:
                 self.fp.write(time.strftime("%a, %d %b %Y %H:%M:%S ",
                                             time.gmtime()))
+
             self.fp.write(s)
+            
+            if self.end:
+                self.fp.flush()
 
         if s.endswith("\n"):
             self.end = True
@@ -87,23 +91,10 @@ class logstream(object):
         if self.verbose:
             self.fp.flush()
 
-    def __call__(self, *argv):
-        """
-        Either called by the option parser (setting verbose=True) or
-        with a single argument to be written to the logstream.
-        """
-        if len(argv) == 4:
-            """
-            Called by the Option Parser when the command line option
-            added by the add_option method() implemented by the two
-            child classes is present.
-            """
-            option, opt, value, parser = argv
-            self.verbose = True
-            
-        elif len(argv) == 1:
-            s, = argv
-            print >> self, s
+    def __call__(self, *args):
+        print >> self, join(map(str, args), " ")
+        self.flush()
+
 
     def __nonzero__(self):
         """
@@ -118,7 +109,9 @@ class logstream(object):
         else:
             return False
         
-
+    def _make_verbose(self, option, opt, value, parser):
+        self.verbose = True
+            
 class logfile(logstream):
     def __init__(self, fn=None):
         logstream.__init__(self)
@@ -150,17 +143,25 @@ class tee(logstream):
     def flush(self):
         for kid in self.kids:
             kid.flush()
+
+    def __setattr__(self, name, value):
+        if name == "verbose":
+            for kid in getattr(self, "kids", []):
+                kid.verbose = value
+                
+        object.__setattr__(self, name, value)
         
         
         
 class _log(logstream):
     def add_option(self, option_parser, short="-v", long="--verbose", ):
         option_parser.add_option(short, long, action="callback",
-                                 callback=self, help="Be verbose (to stderr)")
+                                 callback=self._make_verbose,
+                                 help="Be verbose (to stderr)")
 class _debug(logstream):
     def add_option(self, option_parser, short="-d", long="--debug"):
         option_parser.add_option(short, long, action="callback",
-                                 callback=self,
+                                 callback=self._make_verbose,
                                  help="Print debug messages (to stderr)")
         
 class _sql(logstream):
@@ -205,7 +206,7 @@ class _sql(logstream):
     def add_option(self, option_parser):
         option_parser.add_option(
             "--show-sql", action="callback",
-            callback=self,
+            callback=self._make_verbose,
             help="Log SQL queries and commands (to stderr)")
         
 log = _log()
