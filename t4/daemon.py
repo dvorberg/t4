@@ -25,7 +25,7 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os, os.path
+import sys, os, os.path, atexit, signal, time
 
 """
 This module's daemon class is a classic, minimalistic implementation
@@ -39,8 +39,6 @@ class daemon:
     A generic daemon class.
        
     Usage: subclass the Daemon class and override the run() method.
-
-    I wrote this. -- Diedrich
     """
     def __init__(self, pidfile=None, stdin="/dev/null",
                  stdout="/dev/null", stderr="/dev/null"):
@@ -85,7 +83,17 @@ class daemon:
             sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno,
                                                             e.strerror))
             sys.exit(1)
-       
+              
+        # write pidfile
+        try:
+            pid = str(os.getpid())
+            file(self.pidfile,'w+').write("%s\n" % pid)
+        except IOError, e:
+            print >> sys.stderr, "Failed to write pid file:", e
+            sys.exit(1)
+            
+        atexit.register(self.delpid)
+        
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
@@ -96,26 +104,24 @@ class daemon:
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
        
-        # write pidfile
-        atexit.register(self.delpid)
-        pid = str(os.getpid())
-        file(self.pidfile,'w+').write("%s\n" % pid)
-       
     def delpid(self):
         os.remove(self.pidfile)
  
     def start(self):
         """
         Start the daemon
-        """        
+        """
         # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile,'r')
-            pid = int(pf.read().strip())
+            try:
+                pid = int(pf.read().strip())
+            except ValueError:
+                pid = None
             pf.close()
         except IOError:
             pid = None
-       
+
         if pid:
             message = "pidfile %s already exist. Daemon already running?\n"
             sys.stderr.write(message % self.pidfile)
@@ -146,7 +152,7 @@ class daemon:
         # Try killing the daemon process       
         try:
             while 1:
-                os.kill(pid, SIGTERM)
+                os.kill(pid, signal.SIGTERM)
                 time.sleep(0.1)
         except OSError, err:
             err = str(err)
