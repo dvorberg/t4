@@ -67,12 +67,15 @@ class t4daemon(daemon):
     my_daemon().init_script()
     
     """
-    def __init__(self, pidfile=None, stdin="/dev/null",
-                 stdout="/dev/null", stderr="/dev/null"):
+    def __init__(self, pidfile=None,
+                 logfile_name=None,
+                 stdin="/dev/null",
+                 stdout="/dev/null",
+                 stderr="/dev/null"):
         daemon.__init__(self, pidfile, stdin, stdout, stderr)
 
         # The logfile's verbose flag is on by default.
-        self.log = debug.logfile()
+        self.log = debug.logfile(logfile_name)
         self.log.verbose = True
 
         # Debug has to be turned on explicitly using -d.
@@ -159,10 +162,10 @@ class t4orm_daemon(t4daemon):
     parameter. If you specify the dsn_env_var_name parameter to
     __init__(), -c will default to the content of that variable. 
     """
-    def __init__(self, pidfile=None, stdin="/dev/null",
+    def __init__(self, pidfile=None, logfile=None, stdin="/dev/null",
                  stdout="/dev/null", stderr="/dev/null",
                  dsn_env_var_name=None):
-        t4daemon.__init__(self, pidfile, stdin, stdout, stderr)
+        t4daemon.__init__(self, pidfile, logfile, stdin, stdout, stderr)
         self.dsn_env_var_name = dsn_env_var_name
         self._ds = None
         
