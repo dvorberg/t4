@@ -256,7 +256,10 @@ class dbobject(object):
         else:
             info = {}
             for column, datatype in self.__changed_columns__.items():
-                info[column] = datatype.sql_literal(self)
+                if datatype.isexpression(self):
+                    info[column] = datatype.expression(self)
+                else:
+                    info[column] = datatype.sql_literal(self)
 
             statement = sql.update(self.__relation__,
                                    self.__primary_key__.where(),
