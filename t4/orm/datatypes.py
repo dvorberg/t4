@@ -184,7 +184,8 @@ class datatype(property):
             if self.isset(dbobj):
                 # Remove the current value from the dbobj so we don't
                 # return a value that's not in sync with the database.
-                delattr(dbobj, self.data_attribute_name())
+                delattr(dbobj, self.data_attribute_name())                
+                dbobj.__register_change__(self)
         else:
             if value is not None: value = self.__convert__(value)
 
@@ -240,7 +241,6 @@ class datatype(property):
 
         @returns: SQL literal as a string.
         """
-
         if not self.isset(dbobj):
             msg = "This attribute has not been retrieved from the database."
             raise AttributeError(msg)
@@ -1033,6 +1033,50 @@ class pickle(datatype):
                 pickled = pickle.dumps(value, self.pickle_protocol)
                 return sql.string_literal(pickled)
     
+class python_literal(datatype):
+    """
+    This datatype is for built-in python datastructures. They will be
+    represented as a string when stored using repr() and parsed using
+    eval() on retrievel from the database.
+
+    NOTE THAT THIS ENABLES FOREIGN USERS FROM INJECTING EXECUTABLE
+    PYTHON CODE INTO YOUR PROGRAM IF THEY HAVE WRITE ACCESS TO THE
+    RESPECTIVE DATABASE COLUMNS! 
+    """    
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False):
+        datatype.__init__(self, column, title, validators, has_default)
+
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        value = eval(value)
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    def sql_literal(self, dbobj):
+        """
+        This function takes care of converting the Python object into a
+        serialized string representation.
+        """
+        if not self.isset(dbobj):
+            msg = "This attribute has not been retrieved from the database."
+            raise AttributeError(msg)
+        else:        
+            value = getattr(dbobj, self.data_attribute_name())
+
+            if value is None:
+                return sql.NULL
+            else:
+                r = repr(value)
+                return sql.string_literal(r)
+    
 class path(datatype):
     """
     This datatypes allows to store (ZODB or Unix filesystem) paths in
@@ -1081,4 +1125,21 @@ class path(datatype):
                 return sql.NULL
             else:                
                 return sql.string_literal(join(value, "/"))
+    
+class enum(string):
+    """
+    Represent an SQL ENUM column.
+    """
+    def __init__(self, values, column=None, title=None, validators=(),
+                 has_default=False):
+        string.__init__(self, column, title, validators, False, False)
+        self._values = values
+
+    def __set__(self, dbobj, value):
+        value = str(value)
+        
+        if not value in self._values:
+            raise ValueError(value)
+        else:
+            datatype.__set__(self, dbobj, value)
     
