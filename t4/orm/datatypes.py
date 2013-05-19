@@ -143,10 +143,8 @@ class datatype(property):
         how this works. Be sure to be in a relaxed, ready-for-hard-figuring
         mood.
         """
-        # The error checking in this method may seem overblown. But
-        # working with orm1 showed me that informative error messages,
-        # that precisely say what's going on make development a lot
-        # more fun.
+        # The error checking in this method may seem overblown. But there is
+        # no such thing as too much information on errors.
         
         if dbobj is None: return self
         self.check_dbobj(dbobj)
@@ -154,9 +152,14 @@ class datatype(property):
         if self.isset(dbobj):
             return getattr(dbobj, self.data_attribute_name())
         else:
-            primary_key_property = repr(tuple(dbobj.__primary_key__.\
-                                                         attribute_names()))
-            if not dbobj.__primary_key__.isset():
+            if dbobj.__primary_key__ is not None:
+                primary_key_property = repr(tuple(
+                    dbobj.__primary_key__.attribute_names()))
+            else:
+                primary_key_property = "<no pkey>"
+                
+            if dbobj.__primary_key__ is None or \
+               not dbobj.__primary_key__.isset():
                 pk_literal = "<unset>"
             else:
                 pk_literal = repr(tuple(dbobj.__primary_key__.values()))
