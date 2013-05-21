@@ -311,6 +311,12 @@ class dbobject(object):
         
         return self._ds
 
+    def __commit__(self):
+        """
+        Commit the ds this dbobject belongs to.
+        """
+        self.__ds__().commit()
+
     def __is_stored__(self):
         """
         @returns: Wheather this dbobj has been stored in the database already
