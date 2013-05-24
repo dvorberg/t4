@@ -42,3 +42,5 @@ crawler_re = re.compile(r"^(?!Mozilla|Opera|Iceweasel)|"
                         r"^Mozilla/5\.0 \(compatible; Googlebot/|"
                         r"^Mozilla/5\.0 \(compatible; Yahoo! Slurp|"
                         r"^Mozilla/5\.0 \(compatible; bingbot")
+
+http_url_re = re.compile("https?://(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z])?\.)+[a-z]{2,6}(/.*)?")
