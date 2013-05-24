@@ -252,6 +252,13 @@ class datasource(t4.orm.datasource.datasource_base, sql.pgsql_backend):
         """
         return self._dsn
 
+    def __modify_cursor__(self):
+        if self._modify_cursor is None or getattr(self._modify_cursor,
+                                                  "closed", False):
+            self._modify_cursor = self.cursor()
+            
+        return self._modify_cursor
+
     def execute(self, query, cursor=None):
         """
         Run a query on the database connection.
