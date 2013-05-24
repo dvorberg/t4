@@ -137,11 +137,11 @@ def parse_money(s):
         return float(s)
 
 tag_re = re.compile("<.*?>")    
-def remove_tags(s):
+def remove_tags(s, substitute=""):
     """
     Remove HTML Tags from a string.
     """
-    return tag_re.sub("", s)
+    return tag_re.sub(substitute, s)
     
 def pretty_bytes(bytes):
     if bytes < 1024:
