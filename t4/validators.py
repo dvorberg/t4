@@ -223,9 +223,13 @@ class re_validator(validator):
         match = self.re.match(value)
 
         if match is None:
-            tpl = ( repr(value), self.re.pattern,
-                    dbobj.__class__.__name__, dbproperty.attribute_name, )
-            msg = "%s does not match regular expression %s (%s.%s)" % tpl
+            if dbproperty:
+                tpl = ( repr(value), self.re.pattern,
+                        dbobj.__class__.__name__, dbproperty.attribute_name, )
+                msg = "%s does not match regular expression %s (%s.%s)" % tpl
+            else:
+                msg = "%s does not match regular expression %s" % (
+                    repr(value), self.re.pattern,)
             raise ReValidatorException(msg, dbobj, dbproperty, self.re, value)
 
 
@@ -238,6 +242,14 @@ class email_validator(re_validator):
     
     def __init__(self):
         re_validator.__init__(self, email_re)
+
+class url_validator(re_validator):
+    """
+    Check if the value is a valid (http://-) url.
+    """
+    
+    def __init__(self):
+        re_validator.__init__(self, http_url_re)
 
 class fqdn_validator(re_validator):
     """
