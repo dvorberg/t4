@@ -26,7 +26,7 @@
 import re
 domain_name_re = re.compile("(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z])?\.)+[a-z]{2,6}")
 local_part_re = re.compile(r"[-A-Za-z0-9!#$%&'\*+/=\?^_`\{|\}~\.]+")
-email_re = re.compile(r"(?:[-A-Za-z0-9!#$%&'\*+/=\?^_`\{|\}~]\.?)*[-A-Za-z0-9!#$%&'\*+/=\?^_`\{|\}~]@(?:[0-9a-z](?:[0-9a-zA-Z-]*[0-9a-zA-Z])?\.)+[a-z]{2,4}")
+email_re = re.compile(r"(?:[-A-Za-z0-9!#$%&'\*+/=\?^_`\{|\}~]\.?)*[-A-Za-z0-9!#$%&'\*+/=\?^_`\{|\}~]@(?:[0-9a-z](?:[0-9a-zA-Z-]*[0-9a-zA-Z])?\.)+[a-zA-Z]{2,4}")
 email_re_groups = re.compile(email_re.pattern.replace("?:", ""))
 
 dotted_quad_re = re.compile(r"(?:\d{1,3})\.(?:\d{1,3})\.(?:\d{1,3})\.(?:\d{1,3})")
