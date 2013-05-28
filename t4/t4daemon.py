@@ -68,14 +68,14 @@ class t4daemon(daemon):
     
     """
     def __init__(self, pidfile=None,
-                 logfile_name=None,
+                 logfile=None,
                  stdin="/dev/null",
                  stdout="/dev/null",
                  stderr="/dev/null"):
         daemon.__init__(self, pidfile, stdin, stdout, stderr)
 
         # The logfile's verbose flag is on by default.
-        self.log = debug.logfile(logfile_name)
+        self.log = debug.logfile(logfile)
         self.log.verbose = True
 
         # Debug has to be turned on explicitly using -d.
