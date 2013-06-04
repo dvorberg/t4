@@ -756,6 +756,13 @@ class insert(statement):
             # put a , in between and return them as a string
             tuples = []
             for tpl in self._values:
+                # Look for expressions among the values. Convert them into
+                # simple strings with ( argound them ).
+                tpl = list(tpl)
+                for idx, part in enumerate(tpl):
+                    if isinstance(part, expression):
+                        tpl[idx] = "(" + runner(part) + ")"
+                        
                 tpl = flatten_identifyer_list(runner, tpl)
                 tuples.append("(" + tpl + ")")
             tuples = join(tuples, ", ")
