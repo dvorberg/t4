@@ -486,7 +486,7 @@ class datasource_base:
         self.execute(statement)
         dbobj.__insert__(self)
 
-        if not dont_select:
+        if dbobj.__primary_key__ is not None and not dont_select:
             self.select_after_insert(dbobj)
 
         return cursor
