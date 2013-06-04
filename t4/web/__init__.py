@@ -23,7 +23,7 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 
-import json
+import json, urllib, urlparse
 from title_to_id import title_to_id
 from html_length import html_length, html_area
 from typography import *
@@ -31,4 +31,17 @@ from typography import *
 def js_string_literal(s):
     return json.dumps(s)
 
+def add_url_param(url, params={}):
+    params = urllib.urlencode(params)
+    if "?" in url:
+        return url + "&" + params
+    else:
+        return url + "?" + params
 
+def set_url_param(url, params={}):
+    url = urlparse.urlparse(url)
+    print repr(url.query)
+    query = urlparse.parse_qs(url.query)
+    query.update(params)
+    return "%s://%s%s?%s" % (url.scheme, url.netloc, url.path,
+                             urllib.urlencode(query),)
