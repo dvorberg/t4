@@ -115,9 +115,13 @@ class not_null_validator(validator):
     """
     def check(self, dbobj, dbproperty, value):
         if value is None:
-            tpl = ( dbobj.__class__.__name__,
-                    dbproperty.attribute_name, )
-            raise NotNullError("%s.%s may not be NULL (None)" % tpl,
+            if dbproperty:
+                tpl = ( dbobj.__class__.__name__,
+                        dbproperty.attribute_name, )
+            else:
+                tpl = ( dbobj.__class__.__name__, "", )
+                
+            raise NotNullError("%s.%s may not be NULL (None)." % tpl,
                                dbobj, dbproperty, value)
 
 not_none_validator = not_null_validator # which identifyer makes more sense??
@@ -130,9 +134,13 @@ class not_empty_validator(validator):
     def check(self, dbobj, dbproperty, value):
         if type(value) == StringType or type(value) == UnicodeType:
             if value == "":
-                tpl = ( dbobj.__class__.__name__,
-                        dbproperty.attribute_name, )
-                raise NotEmptyError("%s.%s may not be empty" % tpl,
+                if dbproperty:
+                    tpl = ( dbobj.__class__.__name__,
+                            dbproperty.attribute_name, )
+                else:
+                    tpl = ( dbobj.__class__.__name__, "", )
+                    
+                raise NotEmptyError("%s.%s may not be empty." % tpl,
                                     dbobj, dbproperty, value)
 
 class string_validator(validator):
