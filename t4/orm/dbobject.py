@@ -506,9 +506,9 @@ class dbobject(object):
         """
         Return a representation of this dbobject as dictionary. 
         """
-        return dict(map(lambda dbprop: ( dbprop.data_attribute_name(),
+        return dict(map(lambda dbprop: ( dbprop.attribute_name,
                                          dbprop.__get__(self), ),
-                        self.__dbproperties__())
+                        self.__dbproperties__()))
                 
 class zope_dbobject(dbobject):
     __allow_access_to_unprotected_subobjects__ = True
