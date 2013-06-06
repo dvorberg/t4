@@ -673,7 +673,10 @@ class csv(wrapper):
 
     def __get__(self, dbobj, owner="I still don't know what this does"):
         value = self.inside_datatype.__get__(dbobj, owner)
-        return tuple(split(value, self.separator))
+        if value is None:
+            return None
+        else:
+            return tuple(split(value, self.separator))
 
     def __set__(self, dbobj, value):
         if isinstance(value, sql.expression):
