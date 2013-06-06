@@ -40,7 +40,6 @@ def add_url_param(url, params={}):
 
 def set_url_param(url, params={}):
     url = urlparse.urlparse(url)
-    print repr(url.query)
     query = urlparse.parse_qs(url.query)
     query.update(params)
     return "%s://%s%s?%s" % (url.scheme, url.netloc, url.path,
