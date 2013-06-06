@@ -391,7 +391,7 @@ class dbobject(object):
                 # I'm wondering if this is smart:
                 # datatypes.expression sets its column attribute to an
                 # sql.expression object. This makes joins work, but
-                # creates a danger of ambiguities. 
+                # creates a danger of ambiguities.
                 if full_column_names and \
                         not isinstance(property.column, sql.expression):
                     new = sql.column(property.column.name(),
@@ -402,7 +402,7 @@ class dbobject(object):
 
                 if not new in columns:
                     columns.append(new)
-                
+              
         return columns
     
     __select_columns__ = classmethod(__select_columns__)
@@ -501,7 +501,15 @@ class dbobject(object):
                 self.__class__.__dict__[name].__set__(self, value)
             else:
                 raise NoSuchAttributeOrColumn(name)
-        
+
+    def __as_dict__(self):
+        """
+        Return a representation of this dbobject as dictionary. 
+        """
+        return dict(map(lambda dbprop: ( dbprop.data_attribute_name(),
+                                         dbprop.__get__(self), ),
+                        self.__dbproperties__())
+                
 class zope_dbobject(dbobject):
     __allow_access_to_unprotected_subobjects__ = True
 
