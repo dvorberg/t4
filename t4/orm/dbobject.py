@@ -407,6 +407,15 @@ class dbobject(object):
     
     __select_columns__ = classmethod(__select_columns__)
 
+
+    def __dbattribute_names__(cls):
+        """
+        Return the list of our dbpropertie's attribute names.
+        """
+        return map(lambda dbprop: dbprop.attribute_name,
+                   cls.__dbproperties__())
+        
+    __dbattribute_names__ = classmethod(__dbattribute_names__)
         
     def __repr__(self):
         """
@@ -422,12 +431,7 @@ class dbobject(object):
         #else:
         #    ret.append("oid=NULL")
 
-        attribute_names = []
-        for name, value in self.__dict__.items():
-            if isinstance(value, datatype):
-                attribute_names.append(name)
-                
-        for a in attribute_names:
+        for a in self.__dbattribute_names__():
             b = a + "="
 
             try:
@@ -509,7 +513,11 @@ class dbobject(object):
         return dict(map(lambda dbprop: ( dbprop.attribute_name,
                                          dbprop.__get__(self), ),
                         self.__dbproperties__()))
+
+    
                 
+        
+        
 class zope_dbobject(dbobject):
     __allow_access_to_unprotected_subobjects__ = True
 
