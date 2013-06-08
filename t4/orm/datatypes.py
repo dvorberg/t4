@@ -683,6 +683,9 @@ class csv(wrapper):
             raise TypeError("Can't set csv columns to expressions.")
         value = join(value, self.separator)
         self.inside_datatype.__set__(dbobj, value)
+
+    def __copy__(self):
+        return csv(copy.copy(self.inside_datatype), self.separator)
         
 class expression(wrapper):
     """
