@@ -254,11 +254,14 @@ class email_validator(re_validator):
 class url_validator(re_validator):
     """
     Check if the value is a valid (http://-) url.
-    """
-    
+    """    
     def __init__(self):
         re_validator.__init__(self, http_url_re)
 
+    def check(self, dbobj, dbproperty, value):
+        if value != "":
+            re_validator.check(self, dbobj, dbproperty, value)
+            
 class fqdn_validator(re_validator):
     """
     Check if the value is a valid fully qualified domain name. Note
