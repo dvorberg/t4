@@ -136,7 +136,7 @@ def parse_money(s):
         s = replace(s, ",", ".")
         return float(s)
 
-tag_re = re.compile("<.*?>")    
+tag_re = re.compile("<.*?>", re.DOTALL)
 def remove_tags(s, substitute=""):
     """
     Remove HTML Tags from a string.
