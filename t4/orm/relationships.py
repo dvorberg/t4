@@ -85,6 +85,9 @@ class relationship(datatype):
         """
         return True
 
+    def isexpression(self, dbobj):
+        return False
+        
     def __convert__(self, value):
         "Relationships do not need a convert method or can't use it anyway."
         raise NotImplementedError(__doc__)

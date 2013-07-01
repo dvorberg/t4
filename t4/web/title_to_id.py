@@ -93,7 +93,6 @@ def title_to_id(title):
 
     if id in _reserved_ids:
         id = capitalize(id)
-        print "id (cap) =", repr(id)
     
     return id
 

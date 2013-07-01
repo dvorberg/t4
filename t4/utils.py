@@ -42,7 +42,7 @@ def random_password(length=8, use_specials=True):
     
     ret = []
     ret.append(letters[int(random() * len(letters))])
-    for a in range(length):
+    for a in range(length-1):
         ret.append(letters_and_digits[int(random() * len(letters_and_digits))])
 
     if use_specials:

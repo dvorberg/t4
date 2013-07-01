@@ -159,8 +159,12 @@ class datasource_base:
     def __init__(self):
         self._conn = None
         self._debug = 0
-        self._insert_cursor = None
-    
+        self._modify_cursor = None
+        self._changed_dbobjs = set()
+
+    def __register_change_of__(self, dbobj):
+        self._changed_dbobjs.add(dbobj)
+        
     def _dbconn(self):
         """
         Return the dbconn for this ds
@@ -194,49 +198,65 @@ class datasource_base:
         except TypeError: # result has no size
             return result
 
-    def execute(self, command="", cursor=None):
-        """        
-        Execute COMMAND on the database. If modify is True, the command
-        is assumed to modify the database. All modifying commands
-        will be executed on the same cursor.
+    def execute(self, command, params=(), modify=False):
+        """
+        Execute COMMAND on the database. If modify is True, or the command
+        is one of INSERT, UPDATE or DELETE, the command is assumed to
+        modify the database. All modifying commands will be executed
+        on the same cursor.
         
         @param command: A string containing an SQL command of any kind or an
                sql.statement instance.
         """
-        if cursor is None: cursor = self.cursor()            
-        if command: cursor.execute(command)        
+        if not modify:
+            if type(command) == StringType:
+                c = string.upper(string.lstrip(command[:6]))
+                if c in ("DELETE", "INSERT", "UPDATE",):
+                    modify = True
+            elif isinstance(command, (sql.update, sql.insert, sql.delete)):
+                modify = True
+
+        if modify:
+            cursor = self.__modify_cursor__()
+            self.__flush_updates__()
+        else:
+            cursor = self.cursor()
+
+        cursor.execute(command, params)
         return cursor
+
+    def __modify_cursor__(self):
+        if self._modify_cursor is None:
+            self._modify_cursor = self.cursor()
+            
+        return self._modify_cursor
+
+    def __flush_updates__(self):
+        cursor = self.__modify_cursor__()
+        for dbobj in self._changed_dbobjs:
+            dbobj.__perform_updates__(cursor)
+        self._changed_dbobjs = set()
         
     def commit(self, *dbobjs, **kw):
         """
         Run commit on this ds's connection. You need to do this for any
-        change you really want to happen! .
+        change you really want to happen.
 
         If you specify dbobjects as arguments, only those dbobjs's
         updates will be performed and committed, the others will wait
         in the que. 
         """
-        cursor = kw.get("cursor", None)
-        self.perform_updates(cursor=cursor, *dbobjs)
+        #cursor = kw.get("cursor", None)
+        #self.perform_updates(cursor=cursor, *dbobjs)
+        #self._dbconn().commit()
+        #self._modify_cursor = None
+        #return cursor
+        self.__flush_updates__()
         self._dbconn().commit()
-        self._insert_cursor = None
-        return cursor
-
+    
     def perform_updates(self, *dbobjs, **kw):
-        cursor = kw.get("cursor", None)
-        if cursor is None:
-            update_cursor = self.cursor()
-        else:
-            update_cursor = cursor
-            
-        for dbobj in filter(lambda o: o is not None, dbobjs):
-            if type(dbobj) in ( ListType, TupleType, ):
-                self.perform_updates(*dbobj)
-            else:
-                dbobj.__perform_updates__(update_cursor)
-
-        return cursor
-
+        pass
+        
     def rollback(self):
         """
         Undo the changes you made to the database since the last commit()
@@ -254,6 +274,17 @@ class datasource_base:
         Close the connection to the database.
         """
         self._dbconn().close()
+
+    def ping(self):
+        """
+        Execute SELECT 1 on the database. If that raises any
+        exception, return false, otherwise return true.
+        """
+        try:
+            self.execute("SELECT 1")
+            return True
+        except:
+            return False
 
     def select(self, dbclass, *clauses):
         """
@@ -277,7 +308,7 @@ class datasource_base:
 
             # GROUP BY clauses receive special treatment (in a good
             # way): If their first and only column (i.e. parameter
-            # passed on creation is a dbclass, it is replaced by the
+            # passed on creation) is a dbclass, it is replaced by the
             # dbclass' columns. This is a shorthand to formulate
             # joins. (And t4.sql can't know about dbclasses).
             if isinstance(clause, sql.group_by) and \
@@ -442,6 +473,9 @@ class datasource_base:
                    property.sql_literal(dbobj) is not None:                
                 sql_columns.append(property.column)
                 sql_values.append(property.sql_literal(dbobj))
+            elif property.isexpression(dbobj):
+                sql_columns.append(property.column)
+                sql_values.append(property.expression(dbobj))                
 
         if len(sql_columns) == 0:
             raise DBObjContainsNoData(
@@ -449,17 +483,10 @@ class datasource_base:
 
         statement = sql.insert(dbobj.__relation__, sql_columns, sql_values)
 
-        if cursor is None:
-            if self._insert_cursor is None:
-                self._insert_cursor = self.cursor()
-            else:
-                cursor = self._insert_cursor
-                
-        self._insert_cursor.execute(statement)
-
+        self.execute(statement)
         dbobj.__insert__(self)
 
-        if not dont_select:
+        if dbobj.__primary_key__ is not None and not dont_select:
             self.select_after_insert(dbobj)
 
         return cursor
@@ -481,8 +508,8 @@ class datasource_base:
             where = self.select_after_insert_where(dbobj)
             query = sql.select(columns, dbobj.__relation__, where)
 
-            self._insert_cursor.execute(query)
-            tpl = self._insert_cursor.fetchone()
+            self._modify_cursor.execute(query)
+            tpl = self._modify_cursor.fetchone()
 
             for property, value in zip(properties, tpl):
                 property.__set_from_result__(self, dbobj, value)

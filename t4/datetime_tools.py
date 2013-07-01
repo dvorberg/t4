@@ -89,20 +89,23 @@ def normalize_date(value):
             and hasattr(value, "day"):
 
         if callable(value.year):
-            return DateTime(value.year(),
-                            value.month(),
-                            value.day())
+            return datetime.date(value.year(),
+                                 value.month(),
+                                 value.day())
         else:
-            return DateTime(value.year,
-                            value.month,
-                            value.day)
+            return datetime.date(value.year,
+                                 value.month,
+                                 value.day)
     else:
         raise TypeError(value)
     
     
 # Zope
 try:
-    from DateTime.DateTime import DateTime
+    try:
+        from DateTime.DateTime import DateTime
+    except AttributeError:
+        raise ImportError
     
     def normalize_datetime_zope(value):
         """

@@ -78,7 +78,7 @@ class gadfly_person_insert_test(unittest.TestCase):
         self.assert_(len(result) == 1)
 
         me = result[0]
-        print repr(me.name)
+
         # self.assertEqual(me.name, u"Diedrich üäöÜÄÖß")
         # This doesn't seem to work on the gadfly side.
 

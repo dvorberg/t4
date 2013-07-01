@@ -30,13 +30,13 @@ __docformat__ = "epytext en"
 """
 orm's debug module was re-written in one of my brigher moments:
 
-First of all it contains a class called _logstream which implements a
+First of all it contains a class called logstream which implements a
 subset of Python's file interface. This class is instantiated three
 times and the objects are provided as global variables: log, debug and
 sql. Each of these have a verbose attribute which determines, it log,
 debug or sql information are written to stderr.
 
-Furthermore, the _logstream class contains a mechanism to
+Furthermore, the logstream class contains a mechanism to
 automatically add options to a Python optparse.option_parser
 automatically. Example:
 
@@ -55,10 +55,10 @@ over to your program.
 
 """
 
-import sys, re, time
+import sys, re, time, os.path
 from string import *
 
-class _logstream:
+class logstream(object):
     """    
     Implement a subset of the file interface to be used for status
     messages.  Depending on its verbose flag, the write() method will
@@ -76,7 +76,11 @@ class _logstream:
             if self.end and self.timestamp:
                 self.fp.write(time.strftime("%a, %d %b %Y %H:%M:%S ",
                                             time.gmtime()))
+
             self.fp.write(s)
+            
+            if self.end:
+                self.fp.flush()
 
         if s.endswith("\n"):
             self.end = True
@@ -87,13 +91,10 @@ class _logstream:
         if self.verbose:
             self.fp.flush()
 
-    def __call__(self, option, opt, value, parser):
-        """
-        Called by the Option Parser when the command line option
-        added by the add_option method() implemented by the two child
-        classes is present.
-        """
-        self.verbose = True
+    def __call__(self, *args):
+        print >> self, join(map(str, args), " ")
+        self.flush()
+
 
     def __nonzero__(self):
         """
@@ -108,18 +109,62 @@ class _logstream:
         else:
             return False
         
+    def _make_verbose(self, option, opt, value, parser):
+        self.verbose = True
+            
+class logfile(logstream):
+    def __init__(self, fn=None):
+        logstream.__init__(self)
         
-class _log(_logstream):
+        if fn is None:
+            me = os.path.basename(sys.argv[0])
+            fn = os.path.join("/var/log/%s.log" % me)
+
+        self.fp = open(fn, "a")
+
+class tee(logstream):
+    """
+    Chain a number of logstreams together (parameters to __init__).
+    """
+    def __init__(self, *kids):
+        logstream.__init__(self)
+        self.kids = kids
+
+    def __setattr__(self, name, value):
+        logstream.__setattr__(self, name, value)
+        if name == "verbose" and hasattr(self, "kids"):
+            for kid in self.kids:
+                kid.verbose = self.verbose
+        
+    def write(self, s):
+        for kid in self.kids:
+            kid.write(s)
+
+    def flush(self):
+        for kid in self.kids:
+            kid.flush()
+
+    def __setattr__(self, name, value):
+        if name == "verbose":
+            for kid in getattr(self, "kids", []):
+                kid.verbose = value
+                
+        object.__setattr__(self, name, value)
+        
+        
+        
+class _log(logstream):
     def add_option(self, option_parser, short="-v", long="--verbose", ):
         option_parser.add_option(short, long, action="callback",
-                                 callback=self, help="Be verbose (to stderr)")
-class _debug(_logstream):
+                                 callback=self._make_verbose,
+                                 help="Be verbose (to stderr)")
+class _debug(logstream):
     def add_option(self, option_parser, short="-d", long="--debug"):
         option_parser.add_option(short, long, action="callback",
-                                 callback=self,
+                                 callback=self._make_verbose,
                                  help="Print debug messages (to stderr)")
         
-class _sql(_logstream):
+class _sql(logstream):
     """
     The _sql class has a logging mechanism that is controlled through
     the buffer_size attribute. If buffer_size is greater than 0, buffer_size
@@ -128,7 +173,7 @@ class _sql(_logstream):
     """
     
     def __init__(self):
-        _logstream.__init__(self)
+        logstream.__init__(self)
         self.buffer_size = 0
         self.queries = []
         
@@ -145,7 +190,7 @@ class _sql(_logstream):
         else:
             s = t
             
-        _logstream.write(self, s)
+        logstream.write(self, s)
 
         s = strip(s)
         if s == "": return
@@ -161,7 +206,7 @@ class _sql(_logstream):
     def add_option(self, option_parser):
         option_parser.add_option(
             "--show-sql", action="callback",
-            callback=self,
+            callback=self._make_verbose,
             help="Log SQL queries and commands (to stderr)")
         
 log = _log()

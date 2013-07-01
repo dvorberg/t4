@@ -216,10 +216,13 @@ class to_tsvector_expression(sql.expression):
 
 class tsvector(datatype):
     """
-    ...both direction and magnitude!
+    ...both: direction and magnitude!
     """
     def __set__(self, dbobj, value):
-        if value is not None:            
+        if isinstance(value, sql.expression):
+            raise TypeError("Can't set a tsvector column to an expression.")
+            
+        if value is not None:
             if not isinstance(value, tsvector_data):
                 raise TypeError( "A tsvector dbattribute must be set to a "
                                  "tsvector_data instance.")

@@ -112,9 +112,9 @@ def pretty_money(m, form=False):
         else:
             negative = False
             
-        cents = int(m*100)
-        euros = (cents - (cents % 100)) / 100
-        cents = cents % 100
+        s = "%.2f" % m
+        euros, cents = map(int, split(s, "."))
+        
         if cents == 0 and not form:
             s = str(euros) + ",—"
         else:
@@ -136,12 +136,12 @@ def parse_money(s):
         s = replace(s, ",", ".")
         return float(s)
 
-tag_re = re.compile("<.*?>")    
-def remove_tags(s):
+tag_re = re.compile("<.*?>", re.DOTALL)
+def remove_tags(s, substitute=""):
     """
     Remove HTML Tags from a string.
     """
-    return tag_re.sub("", s)
+    return tag_re.sub(substitute, s)
     
 def pretty_bytes(bytes):
     if bytes < 1024:

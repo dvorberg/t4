@@ -53,8 +53,15 @@ _property_counter = 0
 class datatype(property):
     """
     This class encapsulates a dbclass' property (=attribute). It takes
-    care of the SQL column name and the information
-    actually stored in the database/the dbobject.
+    care of the SQL column name and the information actually stored in the
+    database/the dbobject.
+
+    You may set most dbproperties to sql.expression-instances which are
+    included in the generated INSERT or UPDATE statements as-is. On INSERT
+    the corresponding columns will be SELECTed from the database (like
+    AUTO INCREMENT or default= columns), but on UPDATE they will be put
+    in an unset state and raise an exception on access, because we don't
+    know if the value stored in the dbobj still matches the one in the db.
     """
     python_class = None    
     sql_literal_class = None
@@ -127,6 +134,7 @@ class datatype(property):
         try:
             return self._data_attribute_name
         except AttributeError:
+            from exceptions import DatatypeMustBeUsedInClassDefinition
             raise DatatypeMustBeUsedInClassDefinition(self.__class__.__name__)
         
     def __get__(self, dbobj, owner="owner? Like owner of what??"):
@@ -135,10 +143,8 @@ class datatype(property):
         how this works. Be sure to be in a relaxed, ready-for-hard-figuring
         mood.
         """
-        # The error checking in this method may seem overblown. But
-        # working with orm1 showed me that informative error messages,
-        # that precisely say what's going on make development a lot
-        # more fun.
+        # The error checking in this method may seem overblown. But there is
+        # no such thing as too much information on errors.
         
         if dbobj is None: return self
         self.check_dbobj(dbobj)
@@ -146,9 +152,14 @@ class datatype(property):
         if self.isset(dbobj):
             return getattr(dbobj, self.data_attribute_name())
         else:
-            primary_key_property = repr(tuple(dbobj.__primary_key__.\
-                                                         attribute_names()))
-            if not dbobj.__primary_key__.isset():
+            if dbobj.__primary_key__ is not None:
+                primary_key_property = repr(tuple(
+                    dbobj.__primary_key__.attribute_names()))
+            else:
+                primary_key_property = "<no pkey>"
+                
+            if dbobj.__primary_key__ is None or \
+               not dbobj.__primary_key__.isset():
                 pk_literal = "<unset>"
             else:
                 pk_literal = repr(tuple(dbobj.__primary_key__.values()))
@@ -170,16 +181,25 @@ class datatype(property):
         for data retrieved from the RDBMS. See below.
         """
         self.check_dbobj(dbobj)
-        if value is not None: value = self.__convert__(value)
+        
+        if isinstance(value, sql.expression):
+            setattr(dbobj, " expression" + self.data_attribute_name(), value)
+            if self.isset(dbobj):
+                # Remove the current value from the dbobj so we don't
+                # return a value that's not in sync with the database.
+                delattr(dbobj, self.data_attribute_name())                
+                dbobj.__register_change__(self)
+        else:
+            if value is not None: value = self.__convert__(value)
 
-        for validator in self.validators:
-            validator.check(dbobj, self, value)
+            for validator in self.validators:
+                validator.check(dbobj, self, value)
 
-        old = getattr(dbobj, self.data_attribute_name(), StringType)
-        setattr(dbobj, self.data_attribute_name(), value)
+            old = getattr(dbobj, self.data_attribute_name(), StringType)
+            setattr(dbobj, self.data_attribute_name(), value)
 
-        if dbobj.__is_stored__() and old != value:
-            dbobj.__changed_columns__[self.column] = self
+            if old != value:
+                dbobj.__register_change__(self)
 
     def __set_from_result__(self, ds, dbobj, value):
         setattr(dbobj, self.data_attribute_name(),
@@ -198,6 +218,12 @@ class datatype(property):
         @returns: True, if this property is set, otherwise... well.. False.
         """
         return hasattr(dbobj, self.data_attribute_name())
+
+    def isexpression(self, dbobj):
+        return hasattr(dbobj, " expression" + self.data_attribute_name())
+
+    def expression(self, dbobj):
+        return getattr(dbobj, " expression" + self.data_attribute_name())
     
     def __convert__(self, value):
         """
@@ -218,7 +244,6 @@ class datatype(property):
 
         @returns: SQL literal as a string.
         """
-
         if not self.isset(dbobj):
             msg = "This attribute has not been retrieved from the database."
             raise AttributeError(msg)
@@ -243,7 +268,8 @@ class datatype(property):
         been inserted to pick up information supplied by backend as by SQL
         default values and auto increment columns.
         """
-        return self.has_default and not self.isset(dbobj)
+        return (self.has_default and not self.isset(dbobj)) or \
+            self.isexpression(dbobj)
 
     def __delete__(self, dbobj):
         raise NotImplementedError(
@@ -294,7 +320,8 @@ class string(datatype):
         self.null_on_empty = null_on_empty
 
     def __set__(self, dbobj, value):
-        if value is not None and self.null_on_empty and strip(value) == "" :
+        if not isinstance(value, sql.expression) and \
+           value is not None and self.null_on_empty and strip(value) == "" :
             value = None
         datatype.__set__(self, dbobj, value)
 
@@ -646,11 +673,19 @@ class csv(wrapper):
 
     def __get__(self, dbobj, owner="I still don't know what this does"):
         value = self.inside_datatype.__get__(dbobj, owner)
-        return tuple(split(value, self.separator))
+        if value is None:
+            return None
+        else:
+            return tuple(split(value, self.separator))
 
     def __set__(self, dbobj, value):
+        if isinstance(value, sql.expression):
+            raise TypeError("Can't set csv columns to expressions.")
         value = join(value, self.separator)
         self.inside_datatype.__set__(dbobj, value)
+
+    def __copy__(self):
+        return csv(copy.copy(self.inside_datatype), self.separator)
         
 class expression(wrapper):
     """
@@ -1007,6 +1042,50 @@ class pickle(datatype):
                 pickled = pickle.dumps(value, self.pickle_protocol)
                 return sql.string_literal(pickled)
     
+class python_literal(datatype):
+    """
+    This datatype is for built-in python datastructures. They will be
+    represented as a string when stored using repr() and parsed using
+    eval() on retrievel from the database.
+
+    NOTE THAT THIS ENABLES FOREIGN USERS FROM INJECTING EXECUTABLE
+    PYTHON CODE INTO YOUR PROGRAM IF THEY HAVE WRITE ACCESS TO THE
+    RESPECTIVE DATABASE COLUMNS! 
+    """    
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False):
+        datatype.__init__(self, column, title, validators, has_default)
+
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        value = eval(value)
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    def sql_literal(self, dbobj):
+        """
+        This function takes care of converting the Python object into a
+        serialized string representation.
+        """
+        if not self.isset(dbobj):
+            msg = "This attribute has not been retrieved from the database."
+            raise AttributeError(msg)
+        else:        
+            value = getattr(dbobj, self.data_attribute_name())
+
+            if value is None:
+                return sql.NULL
+            else:
+                r = repr(value)
+                return sql.string_literal(r)
+    
 class path(datatype):
     """
     This datatypes allows to store (ZODB or Unix filesystem) paths in
@@ -1055,4 +1134,21 @@ class path(datatype):
                 return sql.NULL
             else:                
                 return sql.string_literal(join(value, "/"))
+    
+class enum(string):
+    """
+    Represent an SQL ENUM column.
+    """
+    def __init__(self, values, column=None, title=None, validators=(),
+                 has_default=False):
+        string.__init__(self, column, title, validators, False, False)
+        self._values = values
+
+    def __set__(self, dbobj, value):
+        value = str(value)
+        
+        if not value in self._values:
+            raise ValueError(value)
+        else:
+            datatype.__set__(self, dbobj, value)
     

@@ -59,6 +59,9 @@ class ValidatorException(Exception):
         self.dbproperty = dbproperty
         self.value = value
 
+    def __str__(self):
+        return self.message # self.__class__.__name__
+
 
 class NotNullError(ValidatorException):
     """
@@ -96,13 +99,15 @@ class DateValidatorException(ValidatorException):
         ValidatorException.__init__(self, msg, dbobj, dbproperty, value)
         self.format = format
         
+class IntValidatorException(ValidatorException):
+    pass
 
 class validator:
     """
     The default validator: It doesn't check anything.
     """
     def check(self, dbobj, dbproperty, value):
-        return True
+        pass
 
 class not_null_validator(validator):
     """
@@ -110,9 +115,13 @@ class not_null_validator(validator):
     """
     def check(self, dbobj, dbproperty, value):
         if value is None:
-            tpl = ( dbobj.__class__.__name__,
-                    dbproperty.attribute_name, )
-            raise NotNullError("%s.%s may not be NULL (None)" % tpl,
+            if dbproperty:
+                tpl = ( dbobj.__class__.__name__,
+                        dbproperty.attribute_name, )
+            else:
+                tpl = ( dbobj.__class__.__name__, "", )
+                
+            raise NotNullError("%s.%s may not be NULL (None)." % tpl,
                                dbobj, dbproperty, value)
 
 not_none_validator = not_null_validator # which identifyer makes more sense??
@@ -125,11 +134,35 @@ class not_empty_validator(validator):
     def check(self, dbobj, dbproperty, value):
         if type(value) == StringType or type(value) == UnicodeType:
             if value == "":
-                tpl = ( dbobj.__class__.__name__,
-                        dbproperty.attribute_name, )
-                raise NotEmptyError("%s.%s may not be empty" % tpl,
+                if dbproperty:
+                    tpl = ( dbobj.__class__.__name__,
+                            dbproperty.attribute_name, )
+                else:
+                    tpl = ( dbobj.__class__.__name__, "", )
+                    
+                raise NotEmptyError("%s.%s may not be empty." % tpl,
                                     dbobj, dbproperty, value)
 
+class string_validator(validator):
+    """
+    Makes sure the value is a string.
+    """
+    def check(self, dbobj, dbproperty, value):
+        if type(value) != StringType:
+            raise TypeError("String required.")
+            
+class int_validator(validator):
+    """
+    Makes sure the value is an integer or can be converted to one.
+    """
+    def check(self, dbobj, dbproperty, value):
+        if value is not None:
+            try:
+                int(value)
+            except ValueError:
+                raise IntValidatorException("%s not an integer." % repr(value),
+                                            dbobj, dbproperty, value)
+            
 class length_validator(validator):
     """
     Check an argument value's length. None values will be ignored.
@@ -192,12 +225,19 @@ class re_validator(validator):
             self.re = RE
 
     def check(self, dbobj, dbproperty, value):
+        if value is None:
+            return
+        
         match = self.re.match(value)
 
         if match is None:
-            tpl = ( repr(value), self.re.pattern,
-                    dbobj.__class__.__name__, dbproperty.attribute_name, )
-            msg = "%s does not match regular expression %s (%s.%s)" % tpl
+            if dbproperty:
+                tpl = ( repr(value), self.re.pattern,
+                        dbobj.__class__.__name__, dbproperty.attribute_name, )
+                msg = "%s does not match regular expression %s (%s.%s)" % tpl
+            else:
+                msg = "%s does not match regular expression %s" % (
+                    repr(value), self.re.pattern,)
             raise ReValidatorException(msg, dbobj, dbproperty, self.re, value)
 
 
@@ -211,6 +251,17 @@ class email_validator(re_validator):
     def __init__(self):
         re_validator.__init__(self, email_re)
 
+class url_validator(re_validator):
+    """
+    Check if the value is a valid (http://-) url.
+    """    
+    def __init__(self):
+        re_validator.__init__(self, http_url_re)
+
+    def check(self, dbobj, dbproperty, value):
+        if value != "":
+            re_validator.check(self, dbobj, dbproperty, value)
+            
 class fqdn_validator(re_validator):
     """
     Check if the value is a valid fully qualified domain name. Note

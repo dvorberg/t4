@@ -138,7 +138,7 @@ class dbobject(object):
     It contains a number of helper methods which are called like this:
     __help__(). You may safely add db-aware properties, regular properties
     and methods.
-    
+
     @cvar __primary_key__:  The primary key must be either
       - a keys.primary_key instance
       - a tuple of strings indicating attribute (not column!) names of this
@@ -160,7 +160,7 @@ class dbobject(object):
        sql.relation instance.
 
     @cvar __schema__: String containing the name of the schema this dbclass'
-      relatin resides in. 
+      relatin resides in.    
     """
 
     __primary_key__ = "id"
@@ -245,13 +245,21 @@ class dbobject(object):
             self.__primary_key__ = keys.primary_key(self)
 
 
+    def __register_change__(self, dbproperty):
+        if self.__is_stored__():
+            self._ds.__register_change_of__(self)
+            self.__changed_columns__[dbproperty.column] = dbproperty
+            
     def __perform_updates__(self, update_cursor):
         if len(self.__changed_columns__) == 0:
             return
         else:
             info = {}
             for column, datatype in self.__changed_columns__.items():
-                info[column] = datatype.sql_literal(self)
+                if datatype.isexpression(self):
+                    info[column] = datatype.expression(self)
+                else:
+                    info[column] = datatype.sql_literal(self)
 
             statement = sql.update(self.__relation__,
                                    self.__primary_key__.where(),
@@ -302,6 +310,12 @@ class dbobject(object):
             raise ObjectMustBeInserted("...before you use __ds__()")
         
         return self._ds
+
+    def __commit__(self):
+        """
+        Commit the ds this dbobject belongs to.
+        """
+        self.__ds__().commit()
 
     def __is_stored__(self):
         """
@@ -377,7 +391,7 @@ class dbobject(object):
                 # I'm wondering if this is smart:
                 # datatypes.expression sets its column attribute to an
                 # sql.expression object. This makes joins work, but
-                # creates a danger of ambiguities. 
+                # creates a danger of ambiguities.
                 if full_column_names and \
                         not isinstance(property.column, sql.expression):
                     new = sql.column(property.column.name(),
@@ -388,11 +402,20 @@ class dbobject(object):
 
                 if not new in columns:
                     columns.append(new)
-                
+              
         return columns
     
     __select_columns__ = classmethod(__select_columns__)
 
+
+    def __dbattribute_names__(cls):
+        """
+        Return the list of our dbpropertie's attribute names.
+        """
+        return map(lambda dbprop: dbprop.attribute_name,
+                   cls.__dbproperties__())
+        
+    __dbattribute_names__ = classmethod(__dbattribute_names__)
         
     def __repr__(self):
         """
@@ -408,12 +431,7 @@ class dbobject(object):
         #else:
         #    ret.append("oid=NULL")
 
-        attribute_names = []
-        for name, value in self.__dict__.items():
-            if isinstance(value, datatype):
-                attribute_names.append(name)
-                
-        for a in attribute_names:
+        for a in self.__dbattribute_names__():
             b = a + "="
 
             try:
@@ -487,6 +505,18 @@ class dbobject(object):
                 self.__class__.__dict__[name].__set__(self, value)
             else:
                 raise NoSuchAttributeOrColumn(name)
+
+    def __as_dict__(self):
+        """
+        Return a representation of this dbobject as dictionary. 
+        """
+        return dict(map(lambda dbprop: ( dbprop.attribute_name,
+                                         dbprop.__get__(self), ),
+                        self.__dbproperties__()))
+
+    
+                
+        
         
 class zope_dbobject(dbobject):
     __allow_access_to_unprotected_subobjects__ = True
