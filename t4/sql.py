@@ -686,7 +686,7 @@ class offset(clause):
     rank = 6
     
     def __init__(self, offset):
-        if type(offset) != IntType:
+        if not type(offset) in (IntType, LongType,):
             raise TypeError("Offset must be an integer")
         
         self._offset = offset
@@ -862,7 +862,7 @@ class cursor_wrapper:
     def __getattr__(self, name):
         return getattr(self._cursor, name)
 
-    def execute(self, command, params=()):
+    def execute(self, command, params=None):
         if type(command) == UnicodeType:
             raise TypeError("Database queries must be strings, not unicode")
 
@@ -871,10 +871,12 @@ class cursor_wrapper:
             command = runner(command)
             params = runner.params
 
-        if params is None: params = ()
-
-        print >> sqllog, command, "||", repr(params)
-        self._cursor.execute(command, tuple(params))
+        if params is None:
+            print >> sqllog, command
+            self._cursor.execute(command)
+        else:
+            print >> sqllog, command, " || ", repr(params)
+            self._cursor.execute(command, tuple(params))
 
 
 def join_tokens(lst, sep):

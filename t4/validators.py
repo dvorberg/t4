@@ -148,7 +148,7 @@ class string_validator(validator):
     Makes sure the value is a string.
     """
     def check(self, dbobj, dbproperty, value):
-        if type(value) != StringType:
+        if type(value) not in ( StringType, UnicodeType, ):
             raise TypeError("String required.")
             
 class int_validator(validator):
