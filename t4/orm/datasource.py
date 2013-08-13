@@ -301,6 +301,8 @@ class datasource_base:
         """
         from dbobject import dbobject
 
+        clauses = filter(lambda clause: clause is not None, clauses)
+        
         full_column_names = False
         for clause in clauses:
             if isinstance(clause, (sql.left_join, sql.right_join,)):
@@ -359,7 +361,8 @@ class datasource_base:
         @return: An integer value indicating the number of objects
                  of dbclass select() would return if run with these clauses.
         """
-
+        clauses = filter(lambda clause: clause is not None, clauses)
+        
         where = None
         for clause in clauses:
             if isinstance(clause, sql.where):
