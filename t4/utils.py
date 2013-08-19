@@ -49,7 +49,8 @@ def random_password(length=8, use_specials=True):
         for a in ( digits, specials, ):
             idx = int(random() * (len(ret)-1)) + 1
             ret.insert(idx, a[int(random() * len(a))])
-        
+
+    if len(ret) > length: ret = ret[:length]
     ret = join(ret, "")
     return ret
 
