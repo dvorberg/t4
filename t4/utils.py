@@ -53,6 +53,8 @@ def random_password(length=8, use_specials=True):
     ret = join(ret, "")
     return ret
 
+def slug(length=10):
+    return random_password(length, False)
 
 class stupid_dict:
     """
