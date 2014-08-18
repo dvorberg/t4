@@ -78,7 +78,7 @@ class backend:
     """
 
     escaped_chars = ( ('"', r'\"',),
-                      ("'", r'\"',),
+                      ("'", r"\'",),
                       ("%", "%%",), )
     
     def identifyer_quotes(self, name):
