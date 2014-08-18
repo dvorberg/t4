@@ -97,7 +97,7 @@ def improve_typography_unicode(content, lang):
     content = re.sub(date_until_re, r"\1.–\2.", content)
 
     # Put long dashes where they (might) belog
-    content = replace(content, " - ", " — ")
+    content = replace(content, u" - ", u" — ")
 
     return content
 
