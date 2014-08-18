@@ -32,9 +32,9 @@ from types import *
 
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
-    digits = "23456789"
+    digits = "123456789"
     letters_and_digits = letters + digits
-    specials = "+-/*"
+    specials = "+-/*!&#;"
 
     if use_specials:
         # Use at least one letter and one special char.
