@@ -33,6 +33,7 @@ from string import *
 
 from res import *
 
+from t4.web.typography import parse_money
 
 class ValidatorException(Exception):
     """
@@ -102,6 +103,12 @@ class DateValidatorException(ValidatorException):
 class IntValidatorException(ValidatorException):
     pass
 
+class FloatValidatorException(ValidatorException):
+    pass
+
+class MoneyValidatorException(ValidatorException):
+    pass
+
 class validator:
     """
     The default validator: It doesn't check anything.
@@ -162,6 +169,31 @@ class int_validator(validator):
             except ValueError:
                 raise IntValidatorException("%s not an integer." % repr(value),
                                             dbobj, dbproperty, value)
+            
+class float_validator(validator):
+    """
+    Makes sure the value is a float or can be converted to one.
+    """
+    def check(self, dbobj, dbproperty, value):
+        if value is not None:
+            try:
+                float(value)
+            except ValueError:
+                raise FloatValidatorException("%s not a float point number." % (
+                    repr(value), dbobj, dbproperty, value, ))
+            
+class money_validator(validator):
+    """
+    Makes sure the value is a float or can be converted to one.
+    This will remove .s and may replace a decimal , with . 
+    """
+    def check(self, dbobj, dbproperty, value):
+        if value is not None:
+            try:
+                parse_money(value)
+            except ValueError:
+                raise MoneyValidatorException("%s not a valied money expr." % (
+                    repr(value), dbobj, dbproperty, value, ))
             
 class length_validator(validator):
     """

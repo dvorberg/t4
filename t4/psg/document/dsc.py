@@ -814,7 +814,7 @@ class section(file_like_buffer):
 
                 line = strip(line)
 
-                print >> debug, cls.name(), repr(line)[:60]
+                #print >> debug, cls.name(), repr(line)[:60]
                 
                 line = line[2:]                
 
@@ -1125,6 +1125,7 @@ class dsc_document(document_section, document):
 
     def page(self, page_size="a4", label=None):
         ret = dsc_page(self, page_size, label)
+        self.append(ret)
         return ret
 
     def output_file(self): return self
@@ -1149,7 +1150,6 @@ class dsc_document(document_section, document):
                     if first_byte == 128: # pfb
                         font_file = pfb2pfa_buffer(fp)
                     else:
-                        print repr(first_line)
                         if not first_line.startswith("%!PS-AdobeFont"):
                             raise NotImplementedError("Not a pfa/b file!")
                         else:
