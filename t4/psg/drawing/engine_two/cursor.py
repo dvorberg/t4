@@ -28,6 +28,7 @@
 """
 The cursor class.
 """
+import copy
 
 class subcursor(object):
     """
@@ -134,6 +135,9 @@ class cursor(object):
         self.words = subcursor(self.texts)
         self.syllables = subcursor(self.words)
 
+    def clone(self):
+        return copy.deepcopy(self)
+        
     # We need to implement a minimum of the subcursor-class’ methods to
     # function as the root of the cursor tree.
     def current(self): return self._document
