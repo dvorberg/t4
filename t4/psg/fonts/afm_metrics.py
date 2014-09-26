@@ -52,7 +52,7 @@ class global_info(property):
         return metrics.FontMetrics.get(self.keyword, None)
 
 class afm_metrics(metrics):
-    gs_uni_re = re.compile("uni[A-Z0-9]{4}")
+    gs_uni_re = re.compile("uni([A-Fa-f0-9]+).*")
     
     def __init__(self, fp):
         """
@@ -75,14 +75,17 @@ class afm_metrics(metrics):
         need_quote = map(ord, r"\()")
         for char_code, info in char_metrics.iteritems():
             glyph_name = info.get("N", None)
+
+            uni_match = self.gs_uni_re.match(glyph_name)
+    
             if glyph_name is None:
                 unicode_char_code = encoding_table[char_code]
             elif glyph_name == ".notdef":
                 continue
-            elif self.gs_uni_re.match(glyph_name) is not None:
+            elif uni_match is not None:
                 # This may be a Ghostscript specific convention. No word
                 # about this in the standard document.
-                unicode_char_code = int(glyph_name[3:], 16)
+                unicode_char_code = int(uni_match.groups()[0], 16)
             else:
                 try:
                     unicode_char_code = glyph_name_to_unicode[glyph_name]
