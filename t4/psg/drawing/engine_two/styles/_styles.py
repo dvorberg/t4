@@ -36,30 +36,35 @@ class font_style(object):
     """
     Specification of a font as used on the page.    
     """
-    def __init__(self, psg_font,
+    def __init__(self, font_wrapper,
                  font_size=10, kerning=True,
                  char_spacing=0.0, line_height=None):
         """
-        @param font: A psg.font.font or psg.document.font_wrapper instance.
-           If a font instance is provided, the font will be registered with
-           this box' page and installed at document level
-           (see page.register_font() for details).
+        @param font: psg.document.font_wrapper instance.
         @param font_size: Font size in PostScript units, (default 10).
         @param kerning: Boolean indicating whether to make use of kerning
            information from the font metrics if available.
         @param char_spacing: Space added between each pair of chars,
            in PostScript units.
         @param line_height: Space from one baseline to another, in PostScript
-           units. Defaults to 110% of the font-size.        
+           units. Defaults to 1.5× the font-size. The line height must be
+           greater than the font_size.
         """
-        self.font = psg_font 
+        self.font_wrapper = font_wrapper
         self.font_size = font_size
         self.kerning = kerning
         self.char_spacing = char_spacing
+
+        if line_height is None:
+            line_height = 1.5 * font_size
+            
+        assert line_height >= font_size, ValueError(
+            "The line height must always be larger than the font size.")
+
         self.line_height = line_height
 
 class text_style(object):    
-    def __init__(self, font_spec_,
+    def __init__(self, font_style_,
                  color = colors.black,
                  background = backgrounds.none,
                  padding = (0.0, 0.0,)):
@@ -73,7 +78,7 @@ class text_style(object):
         @param padding: A pair of floats (in PostScript units) as left and
             right padding.
         """
-        self.font_spec = font_spec_
+        self.font_style = font_style_
         self.color = color
         self.background = background
         self.padding = padding
