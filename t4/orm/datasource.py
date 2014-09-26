@@ -361,17 +361,9 @@ class datasource_base:
         @return: An integer value indicating the number of objects
                  of dbclass select() would return if run with these clauses.
         """
-        clauses = filter(lambda clause: clause is not None, clauses)
-        
-        where = None
-        for clause in clauses:
-            if isinstance(clause, sql.where):
-                where = clause
-                
-        if where is not None:
-            clauses = [where]
-        else:
-            clauses = []
+        clauses = filter(lambda clause: (isinstance(clause, sql.where) or
+                                         isinstance(clause, sql.left_join)),
+                         clauses)
             
         query = sql.select("COUNT(*)", dbclass.__relation__, *clauses)
         return self.query_one(query)[0]

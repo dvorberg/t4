@@ -50,6 +50,7 @@ def normalize_datetime(value):
     Put in pretty much any representation of a date and receive a
     datetime.datetime object.
     """
+
     if value is None:
         return None
     elif isinstance(value, datetime.datetime):
