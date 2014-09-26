@@ -28,17 +28,9 @@ This program creates an psg.interpreter.gs instance thereby parsing gs's
 Fontmap and reading the .afm files for all available Type1 fonts.
 """
 
-
-#
-# $Log: gs_test.py,v $
-# Revision 1.1.1.1  2006/08/16 20:58:54  t4w00-diedrich
-# Initial import
-#
-#
-
 import sys
 
-from psg.interpreters import gs as GS
+from t4.psg.interpreters import gs as GS
 
 def main(argv):
     gs = GS()
@@ -53,8 +45,3 @@ def main(argv):
 
 main(sys.argv)    
 
-
-# Local variables:
-# mode: python
-# ispell-local-dictionary: "english"
-# End:
