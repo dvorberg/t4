@@ -25,4 +25,7 @@
 ##
 ##  I have added a copy of the GPL in the file gpl.txt.
 
-
+"""\
+This model contains ‘engine two’ the new rich text layout engine. The old
+engine one is the t4.psg.drawing.box.textbox class.
+"""
