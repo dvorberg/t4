@@ -3,7 +3,7 @@
 
 ##  This file is part of psg, PostScript Generator.
 ##
-##  Copyright 2006-12 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2006-14 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -32,8 +32,8 @@ functions are not written, yet, so I type in the PostScript directly.
 
 import sys
 
-from psg.document.dsc import dsc_document
-from psg.util import *
+from t4.psg.document.dsc import dsc_document
+from t4.psg.util import *
 
 def main():
 
@@ -52,10 +52,3 @@ def main():
     fp.close()
     
 main()
-
-
-# Local variables:
-# mode: python
-# ispell-local-dictionary: "english"
-# End:
-
