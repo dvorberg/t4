@@ -36,7 +36,8 @@ from types import *
 
 from t4.psg.exceptions import *
 from t4.psg.util import *
-from t4.psg.fonts.encoding_tables import *
+from t4.psg.fonts.encoding_tables import unicode_to_glyph_name
+from t4.web.title_to_id import asciify
 
 class resource:
     """
@@ -210,6 +211,14 @@ class font_wrapper:
                 
             for char in chars:
                 if not self.font.has_char(char):
+                    # Try to reduce the char to its base-form, that is
+                    # remove all dots and stuff.
+                    #u = unichr(char)
+                    #a = asciify(u)
+
+                    #if a != u:
+                    #    return self.register_chars(a)
+                        
                     if ignore_missing:
                         if unicode_to_glyph_name.has_key(char):
                             tpl = ( self.font.ps_name,
@@ -221,7 +230,7 @@ class font_wrapper:
                         warnings.warn(msg)
                         char = 32 # space
                     else:
-                        tpl = ( char, repr(chr(char)), )
+                        tpl = ( char, repr(unichr(char)), )
                         msg = "No glyph for unicode char %i (%s)" % tpl
                         raise KeyError(msg)
                     
@@ -289,16 +298,22 @@ class font_wrapper:
 
         nodefs = 0
         encoding_vector = []
+        
         for a in range(256):
             if mapping.has_key(a):
-                if nodefs == 1:
-                    encoding_vector.append("/.nodef")
-                    nodefs = 0
-                elif nodefs > 1:
-                    encoding_vector.append("%i{/.nodef}repeat" % nodefs)
-                    nodefs = 0
+                if unicode_to_glyph_name.has_key(mapping[a]):
+                    if nodefs == 1:
+                        encoding_vector.append("/.nodef")
+                        nodefs = 0
+                    elif nodefs > 1:
+                        encoding_vector.append("%i{/.nodef}repeat" % nodefs)
+                        nodefs = 0
 
-                encoding_vector.append("/%s"%unicode_to_glyph_name[mapping[a]])
+                    ps = "/%s" % unicode_to_glyph_name[mapping[a]]
+                else:
+                    ps = "/uni%0000X" % mapping[a]
+                    
+                encoding_vector.append(ps)
             else:
                 nodefs += 1
 
