@@ -57,7 +57,7 @@ class line_iterator:
     After a call to next() the file's seek indcator will point at the
     next by after the newline. Lines are delimeted by either \r\n, \n,
     \r, which ever comes first, in this order. Lines that are longer
-    than 256 bytes will be returned as 256 byte strings without a
+    than 10240 bytes will be returned as 10240 byte strings without a
     newline (because that's the buffer size). This function is binary
     save, no newline transformations are performed.
 
@@ -80,7 +80,7 @@ class line_iterator:
             return self.last_line
             
         old = self.fp.tell()
-        buffer = self.fp.read(256)
+        buffer = self.fp.read(10240)
         
         bytes_read = len(buffer)
         if bytes_read == 0: # eof
