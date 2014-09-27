@@ -38,6 +38,7 @@ from t4.psg.exceptions import *
 from t4.psg.util import *
 from t4.psg.fonts.encoding_tables import unicode_to_glyph_name
 from t4.web.title_to_id import asciify
+from t4.debug import log
 
 class resource:
     """
@@ -227,7 +228,8 @@ class font_wrapper:
                             tpl = ( self.font.ps_name, "#%i" % char, )
                             
                         msg = "%s does not contain needed glyph %s" % tpl
-                        warnings.warn(msg)
+                        if log.verbose:
+                            warnings.warn(msg)
                         char = 32 # space
                     else:
                         tpl = ( char, repr(unichr(char)), )
