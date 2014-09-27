@@ -590,14 +590,16 @@ class CharMetrics(data_section):
 
             elif key == "L": # Ligature
                 if len(elements) != 2:
-                    raise ParseError(
-                        "CharMetrics key L must be L successor ligature")
-                info["L"] = tuple(elements)
+                    msg = ("CharMetrics key L must be L successor "
+                           "ligature: %s") % ( repr(line))
+                    raise ParseError(msg)
+                else:
+                    info["L"] = tuple(elements)
 
             else:
                 raise ParseError("Unknown CharMetric line: %s" % repr(line))
 
-        if not info.has_key("C"):
+        if not info.has_key("C"):            
             raise ParseError("Illegal CharMetrics line: Either C or CH key" +\
                              "Must be present! (%s)" % repr(line))
         else:
@@ -709,7 +711,7 @@ class Composites(data_section):
         char_parts_num = None
         char_parts = []
         for part in parts:
-            elements = splitf(part, ";")
+            elements = split(part, ";")
             elements = filter(lambda s: s != "", elements) # remove whitespace
 
             try:
