@@ -62,7 +62,7 @@ image_slots edit set get download id fields downloads image images
 fields slotinfo store get_image has_image tag image_tag
 search translator""")
 
-def title_to_id(title):
+def title_to_id(title, all_lowercase=True):
     """
     Convert a document title or menu entry to a filename.
     """
@@ -72,8 +72,8 @@ def title_to_id(title):
         title = asciify(unicode(title, "utf-8"))
     elif type(title) != UnicodeType:
         title = str(title)
-        
-    title = lower(title)
+
+    if all_lowercase: title = lower(title)
     title = replace(title, u"ß", "ss")
     
     parts = [""]
@@ -89,7 +89,9 @@ def title_to_id(title):
                 
     id = join(parts, "_")
     id = id.encode("ascii", "ignore")
-    id = lower(id)
+
+    if all_lowercase:
+        id = lower(id)
 
     if id in _reserved_ids:
         id = capitalize(id)
