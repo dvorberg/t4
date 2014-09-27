@@ -107,8 +107,7 @@ class stupid_dict:
             del self.data[idx]
         else:
             raise KeyError(which)
-
-
+            
     def __iter__(self):
         for key, value in self.data: yield key
 
@@ -181,4 +180,82 @@ class stupid_dict:
         """
         for key, value in other.items():
             self[key] = value
+
+
+class name_mangling_dict(dict):
+    """
+    This dict type changes its keys using its _mangle_key(). Keys
+    will also be normalized on access. This creates transparent
+    identifyer ambiguity.
+    """
+
+    def __init__(self, contents=None):
+        """
+        The constructor accepts the same types of input as dict’s
+        constructur. The input datastructure must have non-ambigious
+        keys even after our key normalization applied. Otherwise a
+        ValueError is raise.
+        """
+        dict.__init__(self)
+        
+        if contents is not None:
+            # First, we turn contents into a regular dict to use dict’s
+            # constructor to figure out what to do with the datastrcture
+            # provided.
+            contents = dict(contents)
+
+            # Now we use our __setitem__ function below to set our values,
+            # but we make sure the source dict was non-ambigious considering
+            # our key normalization. This error checking saved the user
+            # from missing supplied values by surprise.
+            for key, value in contents.iteritems():
+                if self.has_key(key):
+                    raise ValueError(("Key %s already present in new "
+                                      "name_mangling_dict.") % repr(key))
+                else:
+                    self[key] = value
+            
+    def _mangle_key(self, key):
+        """
+        We do not implement a default mangling.
+        """
+        raise NotImplementedError()
+        
+    def __setitem__(self, key, value):
+        dict.__setitem__(self, self._mangle_key(key), value)
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._mangle_key(key))
+
+    def __delitem__(self, which):
+        dict.__delitem__(self, self._mangle_key(key))
+
+    def get(self, key, *args):
+        return dict.get(self, self._mangle_key(key), *args)
+
+    def has_key(self, key):
+        return dict.has_key(self, self._mangle_key(key))
+        
+    __contains__ = has_key
+        
+
+class curried_name_mangling_dict(name_mangling_dict):
+    def __init__(self, mangle_function, contents=None):
+        self._mangle_key = mangle_function
+        name_mangling_dict.__init__(self, contents)
+    
+class read_only_dict:
+    """
+    This is a wrapper arround a regular dict that disallows use of the
+    __setitem__() function.
+    """
+    def __init__(self, dict_):
+        self._dict = dict_
+
+    def __setitem__(self, name, value):
+        raise TypeError("This is a read-only dict.")
+
+    def __getattr__(self, name):
+        return getattr(self._dict, name)
+    
 
