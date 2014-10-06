@@ -31,9 +31,10 @@ the classic and beautiful Computer Modern fonts in this directory.
 """
 
 import os.path as op
+from t4.psg.fonts.font import font
 from t4.psg.fonts.type1 import type1
 
-class lazy_loader(object):
+class lazy_loader(font):
     """
     A wrapper class that can be used like a function. Using
     t4.psg.fonts.computer_modern.sans_serif().
@@ -51,6 +52,10 @@ class lazy_loader(object):
             self.__font = type1(shapes, metric)
             
         return self.__font
+
+    def __getattr__(self, name):
+        # This will load the font when used for the first time.
+        return getattr(self(), name)
 
 bright_bold = cmunbbx = lazy_loader("cmunbbx") # CMUBright-Bold
 bright_boldoblique = cmunbxo = lazy_loader("cmunbxo") # CMUBright-BoldOblique
