@@ -26,30 +26,34 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 """
-This module defines and implements a variaty of text and/or paragraph
-backgrounds.
+This module defines and implements list styles.
 """
 
-class background(object):
+class list_style(object):
     """
-    Abstract base class.
+    An abstract base class for list styles.
+    """
+    def __repr__(self):
+        return "<%s list style>" % self.__class__.__name__
+
+class none(list_style):
+    """
+    This element is not a list.
+    """
+    def __nonzero__(self):
+        return False
+    
+    def __repr__(self):        
+        return "<no list style>"
+
+class disk(list_style):
+    """
+    Uses a • bullet point in lists.
     """
     pass
 
-class none(background):
-    def __nonzero__(self):
-        return False
-
-transparent = none        
-
-class color(background):
+class square(list_style):
     """
-    Fill the background with the specified color.
+    Uses a square to indicate items visually.
     """
-    def __init__(self, color):
-        self._color = color
-
-    @property
-    def color(self):
-        return self._color
-
+    pass
