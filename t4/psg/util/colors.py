@@ -91,6 +91,10 @@ class web_color(color):
 white = grey_color(1.0)
 black = grey_color(0.0)
 
+red = rgb_color(1, 0, 0)
+green = rgb_color(0, 1, 0)
+blue = rgb_color(0, 0, 1)
+
 class transparent_color(color):
     def __str__(self):
         return ""
