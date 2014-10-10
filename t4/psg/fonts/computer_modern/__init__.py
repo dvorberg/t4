@@ -34,7 +34,7 @@ import os.path as op
 from t4.psg.fonts.font import font
 from t4.psg.fonts.type1 import type1
 
-class lazy_loader(font):
+class lazy_loader(type1):
     """
     A wrapper class that can be used like a function. Using
     t4.psg.fonts.computer_modern.sans_serif().
