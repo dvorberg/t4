@@ -259,3 +259,19 @@ class read_only_dict:
         return getattr(self._dict, name)
     
 
+def here_and_next(seq, end_marker=None):
+    """
+    Yield pairs like (seq0, seq1,), (seq1, seq2,), … (seqN, `end_marker`,). 
+    """
+    iterator = iter(seq)
+    here = iterator.next()
+    while True:
+        try:
+            next = iterator.next()
+        except StopIteration:
+            yield here, end_marker
+            break
+        else:
+            yield here, next        
+            here = next
+
