@@ -70,8 +70,9 @@ box = box_style({ "margin": (0, 0, 0, 0),
                   "background": backgrounds.none() },
                 name="null box")
 
-paragraph = paragraph_style({"list-style": lists.none()},
-                            name="no list")
+paragraph = paragraph_style({"list-style": lists.none(),
+                             "text-align": "left",},
+                            name="left")
 
 
 cmu_sans_serif = sans_serif_text + box + paragraph
