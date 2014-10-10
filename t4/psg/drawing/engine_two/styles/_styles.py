@@ -89,9 +89,9 @@ class font_family(cascading_style):
         to query a font face by CSS’s style and weight keywords "normal",
         "italic" and "normal", "bold".
         """
-        assert style not in self.styles, ValueError(
+        assert style in self.styles, ValueError(
             "Unknown font style: " + repr(style))
-        assert weight not in self.weights, ValueError(
+        assert weight in self.weights, ValueError(
             "Unknown font weight: " + repr(style))
         
         return self.__by_spec[style][weight]
@@ -129,6 +129,7 @@ class box_style(cascading_style):
 class paragraph_style(cascading_style):
     __constraints__ = {
         "__default__": unknown_property(),        
-        "list-style": isinstance_constraint(lists.list_style) }
-        
+        "list-style": isinstance_constraint(lists.list_style),
+        "text-align": one_of({"left", "right", "center", "justified"}) }
+
 
