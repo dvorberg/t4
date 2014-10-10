@@ -70,8 +70,8 @@ and then moves on.
 import re, types
 from string import *
 
+from t4.utils import here_and_next
 from t4.web.typography import normalize_whitespace
-
 from t4.psg.drawing.engine_two import elements
 
 # Line feeds followed by regular white-space are considered simple spaces.
@@ -89,7 +89,6 @@ def convert(source, styles):
     docstring, to a engine_two.model-tree that can be rendered to PostScript
     using the engine.
     """
-
     # If the source is not a unicode string, we try to convert it.
     if type(source) != types.UnicodeType:
         source = unicode(str(source))
@@ -111,8 +110,8 @@ def convert(source, styles):
     blocks = map(lambda source: _block.from_source(styles, source),
                  block_source)
 
-    return elements.document(styles["document"],
-                             map(lambda block: block.box(), blocks))
+    return elements.richtext(map(lambda block: block.box(), blocks),
+                             styles["document"])
 
 class _block(object):
     """
@@ -167,47 +166,93 @@ class _block(object):
         return elements.box(map(self.paragraph, self.parts), self.style)
 
         
-    inline_markup_re = re.compile(r"""(''[^']+''|       # bold
-                                       //[^/]+//|       # italic
-                                       ''//[^/']+//''|  # bold-italic
-                                       @@[^@]+@@)        # highlighted
+    inline_markup_re = re.compile(r"""((?:''[^']+''|       # bold
+                                          //[^/]+//|       # italic
+                                          ''//[^/']+//''|  # bold-italic
+                                          @@[^@]+@@)       # highlighted
+                                        \s*)
                                     """, re.VERBOSE)
+    word_re = re.compile(r"(\S+)(\s*)")
     def paragraph(self, source):
         texts = []
 
-        pieces = self.inline_markup_re.split(source)
-        pieces.reverse()
+        def bits(source):
+            """
+            Yields bits of text and their corresponding style.
+            """
+            pieces = self.inline_markup_re.split(source)
+            pieces.reverse()
 
-        while pieces:
-            not_formated = pieces.pop()
-            if not_formated:
-                texts.append(elements.text(self.words(not_formated)))
+            def splitwords(text, style, whitespace_style):
+                for letters, whitespace in self.word_re.findall(text):
+                    yield letters, whitespace != u"", style, whitespace_style,
+                    
+            while pieces:
+                not_formated = pieces.pop()
 
-            if pieces:
-                formated = pieces.pop()
-                
-                if formated.startswith("''//"):
-                    text = formated[4:-4]
-                    style = self.styles["bold-italic"]
-                else:
-                    fmt = formated[:2]
-                    text = formated[2:-2]
+                if not_formated:
+                    for tpl in splitwords(not_formated, None, None):
+                        yield tpl
+                        
+                if pieces:
+                    formated = pieces.pop()
 
-                    if fmt == "''":
-                        style = self.styles["bold"]
-                    elif fmt == "//":
-                        style = self.styles["italic"]
-                    if fmt == "@@":
-                        style = self.styles["highlighted"]
+                    stripped = formated.rstrip()
+                    has_outer_whitespace = len(stripped) < len(formated)
+                    
+                    if formated.startswith("''//"):
+                        text = stripped[4:-4]
+                        style = self.styles["bold-italic"]
+                    else:
+                        fmt = stripped[:2]
+                        text = stripped[2:-2]
+                        
+                        if fmt == "''":
+                            style = self.styles["bold"]
+                        elif fmt == "//":
+                            style = self.styles["italic"]
+                        elif fmt == "@@":
+                            style = self.styles["highlighted"]
 
-                texts.append(elements.text(self.words(text, style)))
+                    stripped = text.rstrip()
+                    has_inner_whitespace = len(stripped) < len(text)
+                    
+                    if has_inner_whitespace:
+                        # If the formated text ends in white space,
+                        # we use the format’s style to render it.
+                        whitespace_style = style
+                    else:
+                        # Otherwise we use the surrounding style to render
+                        # it.
+                        whitespace_style = None
+
+                    if has_inner_whitespace or has_outer_whitespace:
+                        text += " "
+                        
+                    for tpl in splitwords(text, style, whitespace_style):
+                        yield tpl
+
+        def words(bits):
+            """
+            Yields elements.word instances for each of the white-space
+            separated words in bits.
+            """
+            word = elements.word([], None)
+            for letters, ends_in_whitespace, style, whitespace_style in bits:
+                word.append(elements.syllable(letters, style, whitespace_style))
+                if ends_in_whitespace:
+                    yield word
+                    word = elements.word([], None)
+                    
+            if len(word) > 0:
+                yield word
+            
+        bs = bits(source)
+        ws = words(bs)
+        ret = elements.paragraph(ws, style=self.style)
         
-        return elements.paragraph(texts, style=self.style)
+        return ret
 
-    def words(self, text, style=None):
-        for word in splitfields(text):
-            yield elements.word(self.syllables(word, style), style)
-        
     def syllables(self, word, style=None):
         parts = split(word, elements.syllable.soft_hyphen_character)
         for part in parts[:-1]:
@@ -239,36 +284,68 @@ class bullet_list(paragraph):
 
         
 if __name__ == "__main__":
+    import sys, os, os.path as op
+    
+    from t4.psg.document.dsc import dsc_document
+    from t4.psg.util import *
+
     from t4.psg.drawing.engine_two.styles import lists
     from t4.psg.drawing.engine_two.styles.computer_modern \
       import cmu_sans_serif as cmuss, text_style, paragraph_style
     from t4.psg.util.colors import red
 
-    document = convert(
-        __doc__, styles={ "document": cmuss,
-                          "h1": text_style({"font-size": 18,
-                                            "line-height": 22,
-                                            "font-weight": "bold"},
-                                           name="h1"),
-                          "h2": text_style({"font-size": 14,
-                                            "line-height": 18,
-                                            "font-weight": "bold"},
-                                           name="h2"),
-                          "h3": text_style({"font-size": 10,
-                                            "line-height": 14,
-                                            "font-weight": "bold"},
-                                           name="h3"),
-                          "bullet_list": paragraph_style({
-                              "list-style": lists.disk(),}, name="list"),
-                          "bold": text_style({"font-weight": "bold"},
-                                             name="bold"),
-                          "italic": text_style({"text-style": "italic"},
-                                               name="italic"),
-                          "bold-italic": text_style({"font-weight": "bold",
-                                                     "text-style": "italic"},
-                                                    name="bold-italic"),
-                          "highlighted": text_style({"font-size": 14,
-                                                     "color": red},
-                                                    name="highlighted") })
+    styles = { "document": cmuss,
+               "h1": text_style({"font-size": 18,
+                                 "line-height": 22,
+                                 "font-weight": "bold"},
+                                name="h1"),
+               "h2": text_style({"font-size": 14,
+                                 "line-height": 18,
+                                 "font-weight": "bold"},
+                                name="h2"),
+               "h3": text_style({"font-size": 10,
+                                 "line-height": 14,
+                                 "font-weight": "bold"},
+                                name="h3"),
+               "bullet_list": paragraph_style({
+                   "list-style": lists.disk(),}, name="list"),
+               "bold": text_style({"font-weight": "bold"},
+                                  name="bold"),
+               "italic": text_style({"text-style": "italic"},
+                                    name="italic"),
+               "bold-italic": text_style({"font-weight": "bold",
+                                          "text-style": "italic"},
+                                         name="bold-italic"),
+               "highlighted": text_style({"font-size": 20,
+                                          "line-height": 22.5,
+                                          "color": red},
+                                         name="highlighted") }
 
-    document.__print__()
+    def render(richtext, outfile_name):
+        margin = mm(18)
+        
+        outdoc = dsc_document("My first textbox example and testbed")
+        page = outdoc.page()
+        canvas = page.canvas(margin=margin, border=False)
+
+        paragraph = richtext[0][0]
+        line = paragraph.lines(page.w()-2*margin).next()
+        line.render(canvas)
+        
+        home_path = os.getenv("HOME")
+        fp = open(op.join(home_path, "Desktop", outfile_name), "w")
+        outdoc.write_to(fp)
+        fp.close()
+        
+    
+    richtext = convert(u"Dies ist ein @@kleiner@@ Test innen''drinn''fett.",
+                       styles)
+    richtext.__print__()
+    print
+    print
+
+    richtext = convert(u"Hallo @@bunte@@ Welt!", styles)
+    richtext.__print__()
+
+    render(richtext, "hello_world.ps")
+
