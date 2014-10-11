@@ -44,6 +44,7 @@ Refer to the class descriptions below for details.
 
 import types, unicodedata, itertools
 from t4.utils import here_and_next
+import t4.psg.drawing.box
 
 import styles
 
@@ -54,6 +55,7 @@ class _node(list):
     def __init__(self, children=[], style=None):
         self._parent = None
         self._style = style
+        self._calculated_style = None
         
         for child in children:
             self.append(child)
@@ -63,17 +65,20 @@ class _node(list):
         assert self.parent is None, ValueError(
             "The node %s has already been inserted." % repr(self))
         self._parent = parent
-
+        self._calculated_style = None
+        
     @property
     def parent(self):
         return self._parent
 
     @property
     def style(self):
-        assert self._parent is not None, AttributeError(
-            "The style attribute is only available after the "
-            "parent has been set. (%s)" % repr(self))
-        return self.parent.style + self._style
+        if not self._calculated_style:
+            assert self._parent is not None, AttributeError(
+                "The style attribute is only available after the "
+                "parent has been set. (%s)" % repr(self))
+            self._calculated_style = self.parent.style + self._style
+        return self._calculated_style
 
         
     def remove_empty_children(self):
@@ -130,8 +135,31 @@ class _node(list):
             child.__print__(indentation+1)
             
         
+class _container_node(_node):
+    """
+    A common base class for the richtext (=root node) and the box
+    type.
+    """
+    def render(self, canvas, first_remaining_word_index=0):
+        y = canvas.h()
 
-class richtext(_node):
+        for element in self:
+            space = t4.psg.drawing.box.canvas(canvas, 0, 0, canvas.w(), y)
+            canvas.append(space)
+            
+            y, first_remaining_word_index = element.render(
+                space, first_remaining_word_index)
+            if first_remaining_word_index is None:
+                # `Element` has been rendered completely. We proceed
+                # to the next element.
+                first_remaining_word_index = 0
+            else:
+                return y, first_remaining_word_index
+
+        return y, None
+    
+            
+class richtext(_container_node):
     """
     This is the root node for a richtext tree.
     """
@@ -145,15 +173,34 @@ class richtext(_node):
 
     @property
     def style(self):
-        return self._style        
+        return self._style
 
-class box(_node):
+            
+
+class box(_container_node):
     """
     This is a box with margin, padding and background.
     """
     def _check_child(self, child):
         assert isinstance(child, (paragraph, box,)), TypeError(
             "Can’t add %s to a box, only paragraphs and boxes." % repr(child))
+
+    def render(self, canvas, first_word_idx=0):
+        def canvas_with_margin(parent, margin):
+            if margin == (0, 0, 0, 0,):
+                return parent
+            else:
+                t, r, b, l = margin
+                ret =  t4.psg.drawing.box.canvas(
+                    parent, l, b, parent.w() - r - l, parent.h() - t - b)
+                parent.append(ret)
+                return ret
+
+        margin_canvas = canvas_with_margin(canvas, self.style.margin)
+        padding_canvas = canvas_with_margin(margin_canvas, self.style.padding)
+        # Draw the background in the padding_canvas
+
+        return _container_node.render(self, padding_canvas, first_word_idx)
 
 class paragraph(_node):
     """
@@ -163,6 +210,35 @@ class paragraph(_node):
         assert isinstance(child, word), TypeError(
             "Can’t add %s to a paragraph, only texts." % repr(child))
 
+    def render(self, canvas, first_word_idx=0):
+        """
+        Render this paragraph on `canvas`. The origin is expected to be
+        located at the upper(!) left corner of the paragraph.
+
+        The function returns a pair:
+
+          (1) The current vertical postion, that is, the y-coordinate
+               of bottom of the last rendered paragraph and        
+          (2) When running out of space, this function returns the
+              (integer) index of the first word that could not be
+              rendered. If all words were rendered, it returns None.
+        """
+        y = canvas.h()
+        for line in self.lines(canvas.w()):
+            height = line.height()
+
+            if y - height < 0:
+                return y, line.first_word_idx,
+            else:
+                print >> canvas, "gsave % paragraph.render()"
+                print >> canvas, 0, y, "translate"
+                print >> canvas, 0, 0, "moveto"
+                line.render(canvas)
+                print >> canvas, "grestore % paragraph.render()"
+                y -= height
+                
+        return y, None,
+        
     def lines(self, width, first_word_idx=0):
         """
         Yield _line objects for the current paragraph, starting with the
@@ -173,6 +249,8 @@ class paragraph(_node):
             yield line
             if line.last:
                 break
+            else:
+                first_word_idx = line.last_word_idx+1
 
     def words_starting_with(self, index):
         """
@@ -182,7 +260,7 @@ class paragraph(_node):
         for i, word in enumerate(self[index:]):
             yield index + i, word,
                 
-    class _line(object):
+    class _line(list):
         """
         This class represents one line of a paragraph and allows to
         render it to a PostScript box (a t4.psg.drawing.box.canvas object).
@@ -203,8 +281,6 @@ class paragraph(_node):
             self.first_word_idx = first_word_idx
 
             # Ok, let’s see which words fit the width.
-            self.words = []
-
             self.space_used = 0.0
             self.word_space_used = 0.0
             self.white_space_used = 0.0
@@ -213,7 +289,7 @@ class paragraph(_node):
                 word_width = word.width()
                 space_width = word.space_width()
                 if self.space_used + word_width <= width:
-                    self.words.append(word)
+                    self.append(word)
                     
                     self.space_used += word_width + space_width
                     self.word_space_used += word_width
@@ -238,22 +314,19 @@ class paragraph(_node):
             descender of all our syllables.
             """
             # This works exactly as word.cenders() and is a copy.
-            cenders = map(lambda word: word.cenders(), self.words)
+            cenders = map(lambda word: word.cenders(), self)
             ascenders, medians, descenders = zip(*cenders)
             return max(ascenders), max(medians), max(descenders),
 
         def render(self, canvas):
+            """
+            Render this line on `canvas`. This expects the cursor to be
+            located at the upper(!) left corner of the line.
+            """
             ascender, median, descender = self.cenders()
 
-            # The coordinate system’s origin is in the lower left.
-            # The vertical coordinate of the baseline is the height of the
-            # descender.
-            baseline_y = descender
-
-            # Translate the canvas’ coordinate system so that the baseline
-            # is y=0.
-            print >> canvas, "gsave"            
-            print >> canvas, 0, baseline_y, "translate"
+            print >> canvas, "gsave % line.render()"
+            print >> canvas, 0, -self.height(), "translate"
             print >> canvas, 0, 0, "moveto"
             
             # For word.render() to work properly, we need to position the
@@ -263,7 +336,7 @@ class paragraph(_node):
                 Yield the x coordinate for each word on this line.
                 """
                 x = 0.0
-                for word in self.words:
+                for word in self:
                     yield x
                     x += word.width() + word.space_width()
 
@@ -277,11 +350,11 @@ class paragraph(_node):
                    "center": center_xs,
                    "justify": justify_xs, }[self.paragraph.style.text_align] 
             
-            for x, word in zip(xs(), self.words):
-                print >> canvas, x, 0, "moveto"
+            for x, word in zip(xs(), self):
+                if x > 0 : print >> canvas, x, 0, "moveto"
                 word.render(canvas)
             
-            print >> canvas, "grestore"
+            print >> canvas, "grestore % line.render()"
             
 class word(_node):
     """
@@ -486,8 +559,8 @@ class syllable(_node):
             kerning = itertools.repeat(0.0)
 
         spacing = self.style.char_spacing
-        char_widths = map(lambda char: font_wrapper.font.metrics.stringwidth(
-            char, font_size), self)
+        char_widths = map(lambda char: font_wrapper.font.metrics.charwidth(
+            ord(char), font_size), self)
         char_offsets = map(lambda (width, kerning,): width + kerning + spacing,
                            zip(char_widths, kerning))
         char_offsets = map(lambda f: "%.2f" % f, char_widths)        
