@@ -29,14 +29,78 @@
 This module implements a generic mechanism to style things. Obviously,
 it’s somewhat modeled after the w3c’s CSS standard.
 """
-import copy
+import re, copy
 
 from t4.utils import name_mangling_dict, curried_name_mangling_dict, \
     read_only_dict
-from t4.web.title_to_id import title_to_id
 
 import constraints
+
+class combined_style(object):
+    """
+    Wrapper object for combining styles.
+    """
+    def __init__(self, *styles):
+        self._styles = styles
+        self._name = None
+
+    def __getattr__(self, name):
+        for style in self._styles:
+            try:
+                return style.__getattr__(name)
+            except AttributeError:
+                pass
+
+        raise AttributeError(name)
         
+    def get(self, name, *args):
+        for style in self._styles:
+            ret = style.get(name, re)
+            
+            if ret != re:
+                return ret
+
+        if len(args) == 0:
+            raise KeyError(name)
+        else:
+            return args[0]
+
+    __getitem__ = get
+
+    @property
+    def name(self):
+        if self._name:
+            return self._name
+        else:
+            return "+".join(map(lambda style: getattr(style,
+                                                      "name", repr(style)),
+                                self._styles))
+
+    def set_name(self, name):
+        self._name = name
+        
+    def __setitem__(self, name, value):
+        raise NotImplementedError("Combined styles are not mutable.")
+
+    def __setattr__(self, name, value):
+        if name.startswith("_"):
+            object.__setattr__(self, name, value)
+        else:
+            raise NotImplementedError("Combined styles are not mutable.")
+
+    def update(self, other):
+        raise NotImplemented()
+
+    def __add__(self, other):
+        if other is None:
+            return self
+        else:
+            return combined_style(other, self)
+
+    def __repr__(self):
+        return "<" + self.name + ">"
+        
+
 class mutable_cascading_style(name_mangling_dict):
     """
     This is a dict-object, that maps attribute names to corresponding
@@ -61,6 +125,7 @@ class mutable_cascading_style(name_mangling_dict):
     # For documentation of the constraints’ semantics, see the constraints
     # module.
 
+    _non_char_re = re.compile(r"[^a-z0-9]+")
     @classmethod
     def _mangle_key(cls, key):
         """
@@ -70,7 +135,9 @@ class mutable_cascading_style(name_mangling_dict):
         if key == "__default__":
             return "__default__"
         else:
-            return title_to_id(key, all_lowercase=False)
+            #parts = cls._non_char_re.split(key.lower())
+            #return "_".join(parts)
+            return key.replace("-", "_")
 
     class __metaclass__(type):
         def __new__(cls, name, bases, dict):
@@ -110,28 +177,21 @@ class mutable_cascading_style(name_mangling_dict):
     def __add__(self, other):
         if other is None:
             return self
-        elif isinstance(other, mutable_cascading_style):
-            constraints = {}
-            constraints.update(self.__constraints__)
-            constraints.update(other.__constraints__)
-
-            retcls = type("+style", (mutable_cascading_style,),
-                          { "__constraints__": constraints })
-            return retcls(other, self, self.name + "+" + other.name)
         else:
-            # We use our own class as a template.
-            other = dict(other)
-            return self.__class__(other, self,
-                                  "%s+%s" % ( self.name, repr(other), ))
-
-    def __getitem__(self, name):
-        return self.get(name)
-
+            return combined_style(other, self)
+        
     def get(self, name, *args):
         key = self._mangle_key(name)
-        return dict.__getitem__(self, key)
+        if len(args) == 0:
+            return dict.__getitem__(self, key)
+        else:
+            return dict.get(self, key, *args)
+
+    __getitem__ = get
 
     def __setitem__(self, name, value):
+        name = self._mangle_key(name)
+        
         constraint = self.__constraints__.get(name, None)
         if constraint is None:
             constraint = self.__constraints__["__default__"]
@@ -153,7 +213,7 @@ class mutable_cascading_style(name_mangling_dict):
 
     def __getattr__(self, name):
         try:
-            return self.__getitem__(title_to_id(name, all_lowercase=False))
+            return dict.__getitem__(self, name)
         except KeyError, key:
             raise AttributeError(key)
         
@@ -161,7 +221,7 @@ class mutable_cascading_style(name_mangling_dict):
         if name.startswith("_"):
             name_mangling_dict.__setattr__(self, name, value)
         else:
-            self.__setitem__(title_to_id(name, all_lowercase=False), value)
+            self.__setitem__(name, value)
 
     def __repr__(self):
         return "<%s %s>" % ( self.__class__.__name__, self.name, )
