@@ -37,7 +37,7 @@ __Syntax__
   (3) A single linefeed followed by one or more space/tab characters is
       ignored. This is important for ‘pretty’ source formatting of lists.
 • All white space is normalized to one space like in HTML or LaTeX.
-• There are limited (wikklytext inspired) inline maarkup options:
+• There are limited (wikklytext inspired) inline markup options:
   ''bold'', //italic//, ''//bold italic//'' and @@highlighted@@.
 • Headings are lines that have equal numbers of leading and trailing
   underscores. _h1_, __h2__, ___h3___.
@@ -289,48 +289,64 @@ if __name__ == "__main__":
     from t4.psg.document.dsc import dsc_document
     from t4.psg.util import *
 
+    import t4.psg.drawing.box
     from t4.psg.drawing.engine_two.styles import lists
     from t4.psg.drawing.engine_two.styles.computer_modern \
-      import cmu_sans_serif as cmuss, text_style, paragraph_style
+      import cmu_sans_serif as cmuss, style
     from t4.psg.util.colors import red
 
     styles = { "document": cmuss,
-               "h1": text_style({"font-size": 18,
-                                 "line-height": 22,
-                                 "font-weight": "bold"},
-                                name="h1"),
-               "h2": text_style({"font-size": 14,
-                                 "line-height": 18,
-                                 "font-weight": "bold"},
-                                name="h2"),
-               "h3": text_style({"font-size": 10,
-                                 "line-height": 14,
-                                 "font-weight": "bold"},
-                                name="h3"),
-               "bullet_list": paragraph_style({
+               "h1": style({"font-size": 18,
+                            "line-height": 22,
+                            "font-weight": "bold",
+                            "margin": (0, 0, 5, 0)},
+                           name="h1"),
+               "h2": style({"font-size": 14,
+                            "line-height": 18,
+                            "font-weight": "bold",
+                            "margin": (9, 0, 4, 0)},
+                           name="h2"),
+               "h3": style({"font-size": 10,
+                            "line-height": 14,
+                            "font-weight": "bold",
+                            "margin": (7, 0, 3, 0)},
+                           name="h3"),
+               "bullet_list": style({
                    "list-style": lists.disk(),}, name="list"),
-               "bold": text_style({"font-weight": "bold"},
-                                  name="bold"),
-               "italic": text_style({"text-style": "italic"},
-                                    name="italic"),
-               "bold-italic": text_style({"font-weight": "bold",
-                                          "text-style": "italic"},
-                                         name="bold-italic"),
-               "highlighted": text_style({"font-size": 20,
-                                          "line-height": 22.5,
-                                          "color": red},
-                                         name="highlighted") }
+               "bold": style({"font-weight": "bold"},
+                             name="bold"),
+               "italic": style({"text-style": "italic"},
+                               name="italic"),
+               "bold-italic": style({"font-weight": "bold",
+                                     "text-style": "italic"},
+                                    name="bold-italic"),
+               "highlighted": style({"font-size": 14,
+                                     "font-weight": "bold",
+                                     "line-height": 16,
+                                     "color": red},
+                                    name="highlighted") }
 
     def render(richtext, outfile_name):
         margin = mm(18)
         
         outdoc = dsc_document("My first textbox example and testbed")
         page = outdoc.page()
-        canvas = page.canvas(margin=margin, border=False)
-
-        paragraph = richtext[0][0]
-        line = paragraph.lines(page.w()-2*margin).next()
-        line.render(canvas)
+        pcanvas = page.canvas(margin=margin)
+        canvas = t4.psg.drawing.box.canvas(pcanvas,
+                                           0, 0, pcanvas.w()/2, pcanvas.h(),
+                                           border=True)
+        pcanvas.append(canvas)
+        
+        #import cProfile, pstats
+        #pr = cProfile.Profile()
+        #pr.enable()
+        
+        richtext.render(canvas)
+        
+        #pr.disable()
+        #ps = pstats.Stats(pr)
+        #ps.sort_stats("tottime")
+        #ps.print_stats()
         
         home_path = os.getenv("HOME")
         fp = open(op.join(home_path, "Desktop", outfile_name), "w")
@@ -340,12 +356,16 @@ if __name__ == "__main__":
     
     richtext = convert(u"Dies ist ein @@kleiner@@ Test innen''drinn''fett.",
                        styles)
-    richtext.__print__()
-    print
-    print
+    # richtext.__print__()
+    # render(richtext, "hello_world.ps")
+    
+    # richtext = convert(u"Hallo @@bunte@@ Welt!", styles)
+    #richtext.__print__()
 
-    richtext = convert(u"Hallo @@bunte@@ Welt!", styles)
-    richtext.__print__()
+    richtext = convert(__doc__, styles)
 
-    render(richtext, "hello_world.ps")
+    # This will load the required font information to RAM.
+    #richtext.__print__()
+    render(richtext, "docstring.ps")
+
 
