@@ -33,8 +33,7 @@ module for testing purposes.
 The two module variables cmu_sans_serif and cmu_serif provide complete sets
 of engine two styles that can be used to render text.
 """
-from t4.psg.drawing.engine_two.styles import font_family, text_style, \
-     box_style, paragraph_style
+from t4.psg.drawing.engine_two.styles import font_family, style
 from t4.psg.fonts.computer_modern import sansserif, sansserif_bold, \
      sansserif_oblique, sansserif_boldoblique, \
      serif_roman, serif_italic, serif_bold, serif_bolditalic
@@ -52,27 +51,27 @@ serif_ff = font_family({ "regular": serif_roman,
                          "bold": serif_bold,
                          "bold-italic": serif_bolditalic })
 
-sans_serif_text = text_style({ "font-family": sans_serif_ff,
-                               "font-size": 10,
-                               "font-weight": "normal",
-                               "text-style": "normal",
-                               "text-background": backgrounds.none(),
-                               "line-height": 12.5,
-                               "kerning": True,
-                               "char-spacing": 0,
-                               "color": colors.black },
-                              name="cmuss")
+sans_serif_text = style({ "font-family": sans_serif_ff,
+                          "font-size": 10,
+                          "font-weight": "normal",
+                          "text-style": "normal",
+                          "text-background": backgrounds.none(),
+                          "line-height": 12.5,
+                          "kerning": True,
+                          "char-spacing": 0,
+                          "color": colors.black },
+                        name="cmuss")
 
 serif_text = sans_serif_text + {"font-family": serif_ff}
 
-box = box_style({ "margin": (0, 0, 0, 0),
-                  "padding": (0, 0, 0, 0),
-                  "background": backgrounds.none() },
-                name="null box")
+box = style({ "margin": (0, 0, 0, 0),
+              "padding": (0, 0, 0, 0),
+              "background": backgrounds.none() },
+            name="null box")
 
-paragraph = paragraph_style({"list-style": lists.none(),
-                             "text-align": "left",},
-                            name="left")
+paragraph = style({"list-style": lists.none(),
+                   "text-align": "left",},
+                  name="left")
 
 
 cmu_sans_serif = sans_serif_text + box + paragraph
