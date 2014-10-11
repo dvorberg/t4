@@ -105,9 +105,11 @@ class font_family(cascading_style):
         return repr(info)
     
     
-class text_style(cascading_style):
+class style(cascading_style):
     __constraints__ = {
         "__default__": unknown_property(),
+        
+        # Text
         "font-family": isinstance_constraint(font_family),
         "font-size": conversion(float),
         "font-weight": one_of({"normal", "bold"}),
@@ -117,18 +119,13 @@ class text_style(cascading_style):
         "kerning": conversion(bool),
         "char-spacing": conversion(float),
         "color": isinstance_constraint(colors.color),
-        }
 
-class box_style(cascading_style):
-    __constraints__ = {
-        "__default__": unknown_property(),
+        # box
         "margin": tuple_of(4, float),
         "padding": tuple_of(4, float),
-        "background": isinstance_constraint(backgrounds.background), }
-    
-class paragraph_style(cascading_style):
-    __constraints__ = {
-        "__default__": unknown_property(),        
+        "background": isinstance_constraint(backgrounds.background),
+
+        # paragraph
         "list-style": isinstance_constraint(lists.list_style),
         "text-align": one_of({"left", "right", "center", "justified"}) }
 
