@@ -59,7 +59,8 @@ sans_serif_text = style({ "font-family": sans_serif_ff,
                           "line-height": 12.5,
                           "kerning": True,
                           "char-spacing": 0,
-                          "color": colors.black },
+                          "color": colors.black,
+                          "hyphenator": None, },
                         name="cmuss")
 
 serif_text = sans_serif_text + {"font-family": serif_ff}
