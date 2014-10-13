@@ -36,6 +36,7 @@ from t4.cascading_style.constraints import accept_none, one_of, tuple_of, \
      isinstance as isinstance_constraint, unknown_property, conversion
 
 import backgrounds, lists
+from t4.psg.drawing.engine_two.hyphenator import hyphenator
 
 
 class isfont(isinstance_constraint):
@@ -119,6 +120,7 @@ class style(cascading_style):
         "kerning": conversion(bool),
         "char-spacing": conversion(float),
         "color": isinstance_constraint(colors.color),
+        "hyphenator": accept_none(isinstance_constraint(hyphenator)),
 
         # box
         "margin": tuple_of(4, float),
