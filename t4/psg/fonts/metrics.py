@@ -100,7 +100,7 @@ class metrics(dict):
         parameter is in regular PostScript units, too.
         """
         if len(s) == 1:
-            return self.charwidth(ord(s), font_size)
+            return self.charwidth(ord(s[0]), font_size)
         else:
             width = sum(map(lambda char: self.get(ord(char), self[32]).width,
                             s)) * font_size
