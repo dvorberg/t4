@@ -28,11 +28,11 @@
 u"""\
 _My old style markup_
 
-This is a slightly updated version of my ‘old style’ markup, a primitive markdown-enspired markup I used a couple of years back. I put his here mainly as a testbed. The following rules apply:
+This is a slightly updated version of my ‘old style’ markup, a primitive markdown-enspired markup I used a couple of years back. I put his here mainly as a testbed. The follow§ing rules apply:
 
 __Syntax__
 • Unix(!)-Linefeeds \n —
-  (1) A single linefeed is a ‘soft’ paragraph break, think <br>.
+  (1) A single linefeed is a ‘soft’ pa''ragra''ph break, think <br>.
   (2) An empty line (two or more consecutive linefeeds) separate paragraphs.
   (3) A single linefeed followed by one or more space/tab characters is
       ignored. This is important for ‘pretty’ source formatting of lists.
@@ -67,12 +67,16 @@ and then moves on.
 
 """
 
-import re, types
+import re, types, unicodedata
 from string import *
 
 from t4.utils import here_and_next
 from t4.web.typography import normalize_whitespace
-from t4.psg.drawing.engine_two import elements
+from t4.psg.drawing.engine_two import elements, hyphenator
+
+soft_hyphen_character = unicodedata.lookup("soft hyphen")
+soft_hyphened_syllable_re = re.compile(
+    ur"(.*?" + soft_hyphen_character + "|.+$)")
 
 # Line feeds followed by regular white-space are considered simple spaces.
 ignorable_linefeeds = re.compile(ur"\n[ \t]+")
@@ -232,6 +236,13 @@ class _block(object):
                     for tpl in splitwords(text, style, whitespace_style):
                         yield tpl
 
+        def syllable_parts(letters):
+            """
+            Split syllables at soft hyphen characters.
+            """
+            return soft_hyphened_syllable_re.findall(letters)
+            
+                        
         def words(bits):
             """
             Yields elements.word instances for each of the white-space
@@ -239,7 +250,9 @@ class _block(object):
             """
             word = elements.word([], None)
             for letters, ends_in_whitespace, style, whitespace_style in bits:
-                word.append(elements.syllable(letters, style, whitespace_style))
+                for part in syllable_parts(letters):
+                    word.append(elements.syllable(part, style,
+                                                  whitespace_style))
                 if ends_in_whitespace:
                     yield word
                     word = elements.word([], None)
@@ -295,20 +308,28 @@ if __name__ == "__main__":
       import cmu_sans_serif as cmuss, style
     from t4.psg.util.colors import red
 
-    styles = { "document": cmuss,
+    base = cmuss + style({"hyphenator": hyphenator.hyphenator("en_US"),
+                          "text-align": "justified",
+                          "margin": (0, 0, 4, 0)},
+                         name="base")
+    
+    styles = { "document": base,
                "h1": style({"font-size": 18,
                             "line-height": 22,
                             "font-weight": "bold",
+                            "text-align": "center",
                             "margin": (0, 0, 5, 0)},
                            name="h1"),
                "h2": style({"font-size": 14,
                             "line-height": 18,
                             "font-weight": "bold",
+                            "text-align": "center",
                             "margin": (9, 0, 4, 0)},
                            name="h2"),
                "h3": style({"font-size": 10,
                             "line-height": 14,
                             "font-weight": "bold",
+                            "text-align": "left",
                             "margin": (7, 0, 3, 0)},
                            name="h3"),
                "bullet_list": style({
@@ -362,10 +383,9 @@ if __name__ == "__main__":
     # richtext = convert(u"Hallo @@bunte@@ Welt!", styles)
     #richtext.__print__()
 
-    richtext = convert(__doc__, styles)
+    docstring = __doc__.replace("§", unicodedata.lookup("soft hyphen"))
+    richtext = convert(docstring, styles)
 
     # This will load the required font information to RAM.
     #richtext.__print__()
     render(richtext, "docstring.ps")
-
-
