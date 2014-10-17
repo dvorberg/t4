@@ -55,7 +55,6 @@ sans_serif_text = style({ "font-family": sans_serif_ff,
                           "font-size": 10,
                           "font-weight": "normal",
                           "text-style": "normal",
-                          "text-background": backgrounds.none(),
                           "line-height": 12.5,
                           "kerning": True,
                           "char-spacing": 0,
@@ -84,7 +83,7 @@ cmu_serif.set_name("cmus")
 if __name__ == "__main__":
     def display_style(style_name, style):
         styles = ( ("Text Style", ("font-family", "font-size", "font-weight",
-                                   "text-style", "text-background",
+                                   "text-style", 
                                    "line-height", "kerning", "char-spacing",
                                    "color",),),
                    ("Box Style", ( "margin", "padding", "background", ),),
