@@ -65,6 +65,7 @@ over harbor and city
 on silent haunches
 and then moves on.
 
+This sentence should end up in the third text box on the page.
 """
 
 import re, types, unicodedata
@@ -167,7 +168,9 @@ class _block(object):
 
 
     def box(self):
-        return elements.box(map(self.paragraph, self.parts), self.style)
+        paragraphs = map(self.paragraph, self.parts)
+        paragraphs = filter(lambda p: len(p) > 0, paragraphs)
+        return elements.box(paragraphs, self.style)
 
         
     inline_markup_re = re.compile(r"""((?:''[^']+''|       # bold
@@ -262,9 +265,7 @@ class _block(object):
             
         bs = bits(source)
         ws = words(bs)
-        ret = elements.paragraph(ws, style=self.style)
-        
-        return ret
+        return elements.paragraph(ws, style=self.style)
 
     def syllables(self, word, style=None):
         parts = split(word, elements.syllable.soft_hyphen_character)
@@ -295,7 +296,6 @@ class bullet_list(paragraph):
         parts = map(lambda s:s[1:], parts)
         paragraph.__init__(self, styles, parts)
 
-        
 if __name__ == "__main__":
     import sys, os, os.path as op
     
@@ -307,6 +307,7 @@ if __name__ == "__main__":
     from t4.psg.drawing.engine_two.styles.computer_modern \
       import cmu_sans_serif as cmuss, style
     from t4.psg.util.colors import red
+    from t4.psg.drawing.engine_two.processors import render_to_filename
 
     base = cmuss + style({"hyphenator": hyphenator.hyphenator("en_US"),
                           "text-align": "justified",
@@ -317,13 +318,13 @@ if __name__ == "__main__":
                "h1": style({"font-size": 18,
                             "line-height": 22,
                             "font-weight": "bold",
-                            "text-align": "center",
+                            "text-align": "left",
                             "margin": (0, 0, 5, 0)},
                            name="h1"),
                "h2": style({"font-size": 14,
                             "line-height": 18,
                             "font-weight": "bold",
-                            "text-align": "center",
+                            "text-align": "left",
                             "margin": (9, 0, 4, 0)},
                            name="h2"),
                "h3": style({"font-size": 10,
@@ -345,35 +346,7 @@ if __name__ == "__main__":
                                      "font-weight": "bold",
                                      "line-height": 16,
                                      "color": red},
-                                    name="highlighted") }
-
-    def render(richtext, outfile_name):
-        margin = mm(18)
-        
-        outdoc = dsc_document("My first textbox example and testbed")
-        page = outdoc.page()
-        pcanvas = page.canvas(margin=margin)
-        canvas = t4.psg.drawing.box.canvas(pcanvas,
-                                           0, 0, pcanvas.w()/2, pcanvas.h(),
-                                           border=True)
-        pcanvas.append(canvas)
-        
-        #import cProfile, pstats
-        #pr = cProfile.Profile()
-        #pr.enable()
-        
-        richtext.render(canvas)
-        
-        #pr.disable()
-        #ps = pstats.Stats(pr)
-        #ps.sort_stats("tottime")
-        #ps.print_stats()
-        
-        home_path = os.getenv("HOME")
-        fp = open(op.join(home_path, "Desktop", outfile_name), "w")
-        outdoc.write_to(fp)
-        fp.close()
-        
+                                    name="highlighted") }        
     
     richtext = convert(u"Dies ist ein @@kleiner@@ Test innen''drinn''fett.",
                        styles)
@@ -387,5 +360,5 @@ if __name__ == "__main__":
     richtext = convert(docstring, styles)
 
     # This will load the required font information to RAM.
-    #richtext.__print__()
-    render(richtext, "docstring.ps")
+    richtext.__print__()
+    render_to_filename(richtext, "docstring.ps")
