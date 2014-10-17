@@ -29,7 +29,7 @@
 This module implements a generic mechanism to style things. Obviously,
 it’s somewhat modeled after the w3c’s CSS standard.
 """
-import re, copy
+import re, copy, itertools, types
 
 from t4.utils import name_mangling_dict, curried_name_mangling_dict, \
     read_only_dict
@@ -72,9 +72,9 @@ class combined_style(object):
         if self._name:
             return self._name
         else:
-            return "+".join(map(lambda style: getattr(style,
-                                                      "name", repr(style)),
-                                self._styles))
+            return "+".join(map(lambda style: getattr(style, "name",
+                                                      repr(style)),
+                                reversed(self._styles)))
 
     def set_name(self, name):
         self._name = name
@@ -99,6 +99,13 @@ class combined_style(object):
 
     def __repr__(self):
         return "<" + self.name + ">"
+
+    def iteritems(self):
+        return itertools.chain(*map(lambda style: style.iteritems(),
+                                    self._styles))
+
+    def items(self):
+        return list(self.iteritems())
         
 
 class mutable_cascading_style(name_mangling_dict):
@@ -140,17 +147,29 @@ class mutable_cascading_style(name_mangling_dict):
             return key.replace("-", "_")
 
     class __metaclass__(type):
+        """
+        The metaclass makes sure that every class that inherits from
+        cascading style inheits its parent’s constraints and that they
+        are contained in a name mangling dict that uses the same mangle
+        function as the style.
+        """
         def __new__(cls, name, bases, dict):
             ret = type.__new__(cls, name, bases, dict)
 
+            constraints = {}
+            for base in bases:
+                if hasattr(base, "__constraints__"):
+                    constraints.update(base.__constraints__)
+            constraints.update(ret.__constraints__)
+            
             # Make sure constraints are callable.
-            for name, value in ret.__constraints__.items():
+            for name, value in constraints.items():
                 assert callable(value), ValueError(
                     "Constraints must be callable, the one for %s isn’t." % (
                         repr(name)))
 
             ret.__constraints__ = curried_name_mangling_dict(
-                ret._mangle_key, ret.__constraints__)
+                ret._mangle_key, constraints)
             
             return ret
 
@@ -160,11 +179,16 @@ class mutable_cascading_style(name_mangling_dict):
         requested attribute in `self`.
         """
         if name is None:
-            self._name = "<%s style>" % self.__class__.__name__
+            self._name = self.__class__.__name__
         else:
             self._name = name
 
-        if parent: self.update(parent)
+        if parent:
+            if not type(parent) in (types.ListType, types.TupleType, ):
+                parent = [ parent, ]
+            for p in parent:
+                self.update(p)
+                
         self.update(styles)
 
     @property
