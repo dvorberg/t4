@@ -106,29 +106,37 @@ class font_family(cascading_style):
         return repr(info)
     
     
-class style(cascading_style):
+class text_style(cascading_style):
     __constraints__ = {
         "__default__": unknown_property(),
-        
-        # Text
         "font-family": isinstance_constraint(font_family),
         "font-size": conversion(float),
         "font-weight": one_of({"normal", "bold"}),
         "text-style": one_of({"normal", "italic"}),
-        "text-background": isinstance_constraint(backgrounds.background),
         "line-height": conversion(float),
         "kerning": conversion(bool),
         "char-spacing": conversion(float),
         "color": isinstance_constraint(colors.color),
-        "hyphenator": accept_none(isinstance_constraint(hyphenator)),
+        "hyphenator": accept_none(isinstance_constraint(hyphenator)), }
 
-        # box
+class box_style(cascading_style):    
+    __constraints__ = {
+        "__default__": unknown_property(),
         "margin": tuple_of(4, float),
         "padding": tuple_of(4, float),
-        "background": isinstance_constraint(backgrounds.background),
+        "background": isinstance_constraint(backgrounds.background), }
 
-        # paragraph
+class paragraph_style(cascading_style):
+    __constraints__ = {
+        "__default__": unknown_property(),
         "list-style": isinstance_constraint(lists.list_style),
         "text-align": one_of({"left", "right", "center", "justified"}) }
+
+class style(text_style, box_style, paragraph_style):
+    """
+    This style contains all the constraint definitions needed to
+    render any psg.elements.* object in PostScript.
+    """
+    __constraints__ = {}
 
 
