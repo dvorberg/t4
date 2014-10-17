@@ -54,7 +54,7 @@ class box:
     page, a width, and a height. In other words: A bounding box. The
     box class provides a mechanism to store PostScript code: It
     maintinas lists called head, body and tail, which contain
-    PostScript statements to draw the box's content. The PosrScript
+    PostScript statements to draw the box's content. The PostScript
     you use is arbitrary with one exceptions: code produced by the box
     is supposed to restore the PostScript graphic context to the same
     state it encountered it in. That's why it unconditionally push()es
