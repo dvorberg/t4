@@ -144,23 +144,30 @@ class _container_node(_node):
     A common base class for the richtext (=root node) and the box
     type.
     """
-    def render(self, canvas, first_remaining_word_index=0):
-        y = canvas.h()
+    def render(self, canvas, cursor=None, y=None):
+        if y is None:
+            y = canvas.h()            
 
-        for element in self:
+        # If the cursor is set and has an entry for this object,
+        # the entry is the index of the last element that has not been
+        # completely rendered.
+        elements = enumerate(self)
+        if cursor and cursor.has_key(id(self)):
+            elements = itertools.islice(elements, cursor[id(self)], None)
+        else:
+            cursor = {}
+            
+        for index, element in elements:
             space = t4.psg.drawing.box.canvas(canvas, 0, 0, canvas.w(), y)
             canvas.append(space)
             
-            y, first_remaining_word_index = element.render(
-                space, first_remaining_word_index)
-            if first_remaining_word_index is None:
-                # `Element` has been rendered completely. We proceed
-                # to the next element.
-                first_remaining_word_index = 0
-            else:
-                return y, first_remaining_word_index
+            y, cursor = element.render(space, cursor)
+            if not cursor is None:
+                # This element has not been rendered completely.
+                cursor[id(self)] = index
+                return y, cursor,
 
-        return y, None
+        return y, None,
     
             
 class richtext(_container_node):
@@ -189,7 +196,7 @@ class box(_container_node):
         assert isinstance(child, (paragraph, box,)), TypeError(
             "Can’t add %s to a box, only paragraphs and boxes." % repr(child))
 
-    def render(self, canvas, first_word_idx=0):
+    def render(self, canvas, cursor=None):
         def canvas_with_margin(parent, margin):
             if margin == (0, 0, 0, 0,):
                 return parent
@@ -202,9 +209,13 @@ class box(_container_node):
 
         margin_canvas = canvas_with_margin(canvas, self.style.margin)
         padding_canvas = canvas_with_margin(margin_canvas, self.style.padding)
-        # Draw the background in the padding_canvas
 
-        return _container_node.render(self, padding_canvas, first_word_idx)
+        if self.style.background:
+            raise NotImplementedError("Backgrounds aren’t implemented, yet. "
+                                      "Patches welcome!")
+            # Draw the background in the padding_canvas
+
+        return _container_node.render(self, padding_canvas, cursor)
 
 class paragraph(_node):
     """
@@ -214,7 +225,7 @@ class paragraph(_node):
         assert isinstance(child, word), TypeError(
             "Can’t add %s to a paragraph, only texts." % repr(child))
 
-    def render(self, canvas, first_word_idx=0):
+    def render(self, canvas, cursor=None):
         """
         Render this paragraph on `canvas`. The origin is expected to be
         located at the upper(!) left corner of the paragraph.
@@ -228,11 +239,12 @@ class paragraph(_node):
               rendered. If all words were rendered, it returns None.
         """
         y = canvas.h()
-        for line in self.lines(canvas.w()):
+        last_line_rendered = None
+        for line in self.lines(canvas.w(), cursor):
             height = line.height()
 
             if y - height < 0:
-                return y, line.first_word_idx,
+                return y, { "last_line_rendered": last_line_rendered, }
             else:
                 print >> canvas, "gsave % paragraph.render()"
                 print >> canvas, 0, y, "translate"
@@ -240,15 +252,20 @@ class paragraph(_node):
                 line.render(canvas)
                 print >> canvas, "grestore % paragraph.render()"
                 y -= height
+                last_line_rendered = line
                 
         return y, None,
         
-    def lines(self, width, first_word_idx=0):
+    def lines(self, width, cursor):
         """
         Yield _line objects for the current paragraph, starting with the
         word at `first_word_idx`, fittet to a box `width`.
         """
-        line = None
+        if cursor:
+            line = cursor["last_line_rendered"]
+        else:
+            line = None
+            
         while True:
             line = self._line(self, width, line)
             yield line
@@ -340,7 +357,8 @@ class paragraph(_node):
                     break
                     
             self.last_word_idx = idx
-            self.last = ( idx == len(self.paragraph)-1 )
+            self.last = ( idx == len(self.paragraph)-1 and \
+                          self.hyphenation_remainder is None)
 
         def height(self):
             """
@@ -432,7 +450,8 @@ class _wordlike:
         """
         The height of a word is the sum of its cenders.
         """
-        return sum(self.cenders())
+        #return sum(self.cenders())
+        return max(map(lambda kid: kid.height(), self))
 
     def space_width(self):
         """
@@ -492,8 +511,11 @@ class word(_wordlike, _node):
             self._hyphenated = True
             
     def __repr__(self):
-        return "%s %.1f×%.1f" % ( _node.__repr__(self),
-                                  self.width(), self.height(), )
+        if self._parent is None:
+            return _node.__repr__(self) + " NO PARENT"
+        else:
+            return "%s %.1f×%.1f" % ( _node.__repr__(self),
+                                      self.width(), self.height(), )
 
     def hyphenated_at(self, x):
         if self.style.hyphenator is not None and not self._hyphenated:
@@ -616,7 +638,7 @@ class syllable(_node):
         Return the with of a space character in our font.
         """
         if self._whitespace_style:
-            whitespace_style = self._whitespace_style
+            whitespace_style = self.parent.style + self._whitespace_style
         else:
             whitespace_style = self.parent.style
 
@@ -630,10 +652,14 @@ class syllable(_node):
         return metric * self.style.font_size / 1000.0
     
     def __repr__(self, indentation=0):
-        return "%s %s %s %.1f×%.1f" % ( self.__class__.__name__,
-                                        repr("".join(self)),
-                                        self._style_info(),
-                                        self.width(), self.height(), )
+        if self._parent is None:
+            return "%s %s NO PARENT" % ( self.__class__.__name__,
+                                         repr("".join(self)), )
+        else:
+            return "%s %s %s %.1f×%.1f" % ( self.__class__.__name__,
+                                            repr("".join(self)),
+                                            self._style_info(),
+                                            self.width(), self.height(), )
         
     def __print__(self, indentation=0):
         print indentation * "  ", repr(self)
