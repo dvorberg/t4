@@ -28,7 +28,7 @@
 u"""\
 _My old style markup_
 
-This is a slightly updated version of my ‘old style’ markup, a primitive markdown-enspired markup I used a couple of years back. I put his here mainly as a testbed. The follow§ing rules apply:
+This is a slightly updated version of my ‘old style’ markup, a primitive markdown-enspired markup I used a couple of years back. I put his here mainly as a te''stb''ed. The follow§ing rules apply:
 
 __Syntax__
 • Unix(!)-Linefeeds \n —
@@ -304,15 +304,16 @@ if __name__ == "__main__":
 
     import t4.psg.drawing.box
     from t4.psg.drawing.engine_two.styles import lists
-    from t4.psg.drawing.engine_two.styles.computer_modern \
-      import cmu_sans_serif as cmuss, style
+    from t4.psg.drawing.engine_two.styles.bitstream_vera import verasans as sans
+    #from t4.psg.drawing.engine_two.styles.computer_modern import cmu_sans_serif as sans
     from t4.psg.util.colors import red
+    from t4.psg.drawing.engine_two.styles import style
     from t4.psg.drawing.engine_two.processors import render_to_filename
 
-    base = cmuss + style({"hyphenator": hyphenator.hyphenator("en_US"),
-                          "text-align": "justified",
-                          "margin": (0, 0, 4, 0)},
-                         name="base")
+    base = sans + style({"hyphenator": hyphenator.hyphenator("en_US"),
+                         "text-align": "justified",
+                         "margin": (0, 0, 4, 0)},
+                        name="base")
     
     styles = { "document": base,
                "h1": style({"font-size": 18,
