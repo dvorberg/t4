@@ -80,30 +80,4 @@ cmu_sans_serif.set_name("cmuss")
 cmu_serif = serif_text + box + paragraph
 cmu_serif.set_name("cmus")
 
-if __name__ == "__main__":
-    def display_style(style_name, style):
-        styles = ( ("Text Style", ("font-family", "font-size", "font-weight",
-                                   "text-style", 
-                                   "line-height", "kerning", "char-spacing",
-                                   "color",),),
-                   ("Box Style", ( "margin", "padding", "background", ),),
-                   ("Paragraph Style", ( "list-style", ),), )
-    
-        print style_name
-        
-        for name, fields in styles:
-            print "  ", name
-            for field in fields:
-                if field == "font-family":
-                    ff = style.get(field)
-                    for f in ("regular", "italic", "bold", "bold-italic"):
-                        print "      ", f + ":", repr(getattr(ff, f).full_name)
-                else:
-                    print "    ", field + ":", style.get(field)
-        print
-
-    display_style("CMU Sans Serif", cmu_sans_serif)
-    display_style("CMU Serif", cmu_serif)
-    
-
         
