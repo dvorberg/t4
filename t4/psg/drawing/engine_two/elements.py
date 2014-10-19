@@ -338,7 +338,7 @@ class paragraph(_node):
                     # This is where we’d have to ask word, if it can by
                     # hyphenated.
                     fits, remainder = word.hyphenated_at(
-                        width - self.space_used)
+                        width - self.space_used - old_space_width)
 
                     if fits is not None:
                         self.append(fits)
@@ -410,7 +410,8 @@ class paragraph(_node):
                         yield x
                 else:
                     x = 0.0
-                    distance = (self.width - self.word_space_used) / len(self)
+                    distance = (self.width-self.word_space_used)/(len(self)-1)
+                    
                     for word in self:
                         yield x
                         x += word.width() + distance
@@ -648,8 +649,13 @@ class syllable(_node):
         return metric * whitespace_style.font_size / 1000.0
 
     def hyphen_width(self):
-        metric = self.font_metrics.get(ord(hyphen_character), ord("-")).width
-        return metric * self.style.font_size / 1000.0
+        metric = self.font_metrics.get(ord(hyphen_character), None)
+        if metric is None:
+            metric = self.font_metrics.get(" ", None)
+            if metric is None:
+                return self.space_width()
+        
+        return metric.width * self.style.font_size / 1000.0
     
     def __repr__(self, indentation=0):
         if self._parent is None:
@@ -697,7 +703,10 @@ class syllable(_node):
 
         letters = list(self)
         if with_hyphen:
-            letters.append(hyphen_character)
+            if font_wrapper.font.has_char(hyphen_character):
+                letters.append(hyphen_character)
+            else:
+                letters.append("-")
                 
         def kerning_for_pairs():
             """
