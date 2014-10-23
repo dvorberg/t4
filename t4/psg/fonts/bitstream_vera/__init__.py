@@ -33,31 +33,12 @@ the popular Bitstream Vera typefaces contained in this directory.
 import os.path as op
 from t4.psg.fonts.font import font
 from t4.psg.fonts.type1 import type1
+from t4.psg.fonts.type1 import lazy_loader as lazy_loader_base
 
-class lazy_loader(type1):
-    """
-    A wrapper class that can be used like a function. Using
-    t4.psg.fonts.computer_modern.sans_serif().
-    """
-    def __init__(self, filename):
-        self.__font_filename = filename
-        self.__font = None
+class lazy_loader(lazy_loader_base):
+    def here(self):
+        return op.abspath(op.dirname(__file__))
 
-    def __call__(self):
-        if self.__font is None:
-            here = op.abspath(op.dirname(__file__))
-            shapes = op.join(here, self.__font_filename + ".pfb")
-            metric = op.join(here, self.__font_filename + ".afm")
-        
-            self.__font = type1(shapes, metric)
-            
-        return self.__font
-
-    def __getattr__(self, name):
-        # This will load the font when used for the first time.
-        return getattr(self(), name)
-
- 
 sans_roman = lazy_loader("BitstreamVeraSans-Roman") # Sans-Roman
 sans_oblique = lazy_loader("BitstreamVeraSans-Oblique") # Sans-Oblique
 sans_bold = lazy_loader("BitstreamVeraSans-Bold") # Sans-Bold
