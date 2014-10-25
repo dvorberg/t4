@@ -30,7 +30,12 @@ This module provides functionality to auto-hyphenate words using the PyHyphen
 package.
 """
 
-import re, hyphen
+import re
+
+try:
+    import hyphen
+except ImportError:
+    hyphen = None
 
 class hyphenator(object):
     """
@@ -42,6 +47,8 @@ class hyphenator(object):
     The default implementation uses PyHyphen.
     """
     def __init__(self, lang):
+        if hyphen is None:
+            raise ImportError("hyphen")
         self._hyphenator = hyphen.Hyphenator(lang)
         
     def syllables(self, word):
