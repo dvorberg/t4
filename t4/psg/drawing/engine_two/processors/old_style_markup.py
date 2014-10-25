@@ -88,11 +88,18 @@ heading_re = re.compile(ur"((?:^|\n)(_+)(.*?)(_+)(?:\n|$))")
 # Blocks are separated by more than one consecutive \n.
 block_separator_re = re.compile(ur"\n\n+")
 
-def convert(source, styles):
+def convert(source, styles):    
     """
     Convert `source`, a unicode string formatted as describe in the module
     docstring, to a engine_two.model-tree that can be rendered to PostScript
     using the engine.
+    """
+    return elements.richtext(boxes(source, styles), style=styles["document"])
+
+def boxes(source, styles):
+    """
+    Return a list of elements.box objects derived from source you can
+    append to your own elements.richtext object.
     """
     # If the source is not a unicode string, we try to convert it.
     if type(source) != types.UnicodeType:
@@ -114,9 +121,8 @@ def convert(source, styles):
     
     blocks = map(lambda source: _block.from_source(styles, source),
                  block_source)
+    return map(lambda block: block.box(), blocks)
 
-    return elements.richtext(map(lambda block: block.box(), blocks),
-                             styles["document"])
 
 class _block(object):
     """
@@ -170,7 +176,7 @@ class _block(object):
     def box(self):
         paragraphs = map(self.paragraph, self.parts)
         paragraphs = filter(lambda p: len(p) > 0, paragraphs)
-        return elements.box(paragraphs, self.style)
+        return elements.box(paragraphs, style=self.style)
 
         
     inline_markup_re = re.compile(r"""((?:''[^']+''|       # bold
@@ -251,14 +257,14 @@ class _block(object):
             Yields elements.word instances for each of the white-space
             separated words in bits.
             """
-            word = elements.word([], None)
+            word = elements.word()
             for letters, ends_in_whitespace, style, whitespace_style in bits:
                 for part in syllable_parts(letters):
                     word.append(elements.syllable(part, style,
                                                   whitespace_style))
                 if ends_in_whitespace:
                     yield word
-                    word = elements.word([], None)
+                    word = elements.word()
                     
             if len(word) > 0:
                 yield word
