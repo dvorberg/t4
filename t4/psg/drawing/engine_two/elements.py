@@ -42,7 +42,8 @@ Note that “word” and “syllable” are technical not linguistic units here.
 Refer to the class descriptions below for details.
 """
 
-import types, unicodedata, itertools
+from string import *
+import types, unicodedata, itertools, collections
 from t4.utils import here_and_next
 import t4.psg.drawing.box
 
@@ -56,9 +57,16 @@ class _node(list):
     """
     An abstract base class for our node types.
     """
-    def __init__(self, children=[], style=None):
+    def __init__(self, *children, **kw):
+        """
+        The style= argument is currently the only one extracted from kw.
+        The argument list must be written in arbitrary form, because
+        otherwise the syntax I wanted for the element objects does not
+        work. Consequently, style= always needs to be passed as a keyword
+        argument.
+        """
         self._parent = None
-        self._style = style
+        self._style = kw.get("style", None)
         self._calculated_style = None
         
         for child in children:
@@ -109,9 +117,14 @@ class _node(list):
                              "instantiate it at all.")
         
     def append(self, child):
-        self._check_child(child)
-        child._set_parent(self)
-        list.append(self, child)
+        if not isinstance(child, _node) and \
+           isinstance(child, collections.Iterable):
+            for a in child:
+                self.append(a)
+        else:
+            self._check_child(child)
+            child._set_parent(self)
+            list.append(self, child)
 
     def __setitem__(self, key, child):
         self._check_child(child)
@@ -174,10 +187,11 @@ class richtext(_container_node):
     """
     This is the root node for a richtext tree.
     """
-    def __init__(self, children=[], style=None):
+    def __init__(self, *children, **kw):
+        style = kw.get("style", None)
         assert style is not None, ValueError(
             "A richtext’s style may not be None.")
-        _node.__init__(self, children, style)
+        _node.__init__(self, *children, **kw)
     
     def _check_child(self, child):
         assert isinstance(child, box), TypeError
@@ -501,8 +515,8 @@ class word(_wordlike, _node):
     because it’s identical to the functionality of _wordpart, which is not
     a descendent of _node.
     """
-    def __init__(self, children=[], style=None):
-        _node.__init__(self, children, style)
+    def __init__(self, *children, **kw):
+        _node.__init__(self, *children, **kw)
         self._hyphenated = False
     
     def _check_child(self, child):
@@ -579,7 +593,7 @@ class syllable(_node):
             "Soft hyphens are only allowed as the last character of "
             "a syllable.")
 
-        _node.__init__(self, list(letters), style)
+        _node.__init__(self, *list(letters), style=style)
         self._whitespace_style = whitespace_style
 
     def append(self, letter):
@@ -608,11 +622,23 @@ class syllable(_node):
         """
         Return the width of this syllable on the page in PostScript units.
         """
+        letters = self.text_transformed()
+
         return self.font_metrics.stringwidth(
-            self,
+            list(letters),
             self.style.font_size,
             self.style.kerning,
             self.style.char_spacing)
+
+    def text_transformed(self):
+        letters = join(self, "")
+        
+        if self.style.text_transform == "uppercase":
+            return letters.upper()
+        elif self.style.text_transform == "lowercase":
+            return letters.lower()
+        else:
+            return letters
 
     def height(self):
         return self.style.line_height
@@ -701,7 +727,8 @@ class syllable(_node):
                                                     font_size,
                                                     self.style.color, )
 
-        letters = list(self)
+        letters = list(self.text_transformed())
+            
         if with_hyphen:
             if font_wrapper.font.has_char(hyphen_character):
                 letters.append(hyphen_character)
