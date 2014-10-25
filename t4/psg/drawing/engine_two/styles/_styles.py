@@ -66,6 +66,10 @@ class font_family(cascading_style):
     weights = { "normal", "bold" }
 
     def __init__(self, styles={}, parent=None):
+        self.bold = None
+        self.italic = None
+        self.bold_italic = None
+        
         cascading_style.__init__(self, styles, parent)
 
         self.__by_spec = { "normal": { "normal": self.regular,
@@ -101,7 +105,12 @@ class font_family(cascading_style):
         info = {}
         for key in self.__constraints__.keys():
             if key != "__default__":
-                info[key] = self.get(key).full_name
+                font = self.get(key, None)
+
+                if font:
+                    info[key] = font.full_name
+                else:
+                    info[key] = "%s not loaded" % key
 
         return repr(info)
     
@@ -117,7 +126,21 @@ class text_style(cascading_style):
         "kerning": conversion(bool),
         "char-spacing": conversion(float),
         "color": isinstance_constraint(colors.color),
+        "text-transform": accept_none(one_of({"lowercase", "uppercase"})),
         "hyphenator": accept_none(isinstance_constraint(hyphenator)), }
+
+    def __init__(self, styles={}, parent=None, name=None):
+        # Set default values.
+        self.font_weight = "normal"
+        self.text_style = "normal"
+        self.kerning = True
+        self.char_spacing = 0
+        self.color = colors.black
+        self.text_transform = None
+        self.hyphenator = None
+
+        cascading_style.__init__(self, styles, parent, name)
+        
 
 class box_style(cascading_style):    
     __constraints__ = {
@@ -126,12 +149,28 @@ class box_style(cascading_style):
         "padding": tuple_of(4, float),
         "background": isinstance_constraint(backgrounds.background), }
 
+    def __init__(self, styles={}, parent=None, name=None):
+        # Set default values.
+        self.margin = (0, 0, 0, 0)
+        self.padding = (0, 0, 0, 0)
+        self.background = backgrounds.none()
+        
+        cascading_style.__init__(self, styles, parent, name)
+
+    
 class paragraph_style(cascading_style):
     __constraints__ = {
         "__default__": unknown_property(),
         "list-style": isinstance_constraint(lists.list_style),
         "text-align": one_of({"left", "right", "center", "justified"}) }
 
+    def __init__(self, styles={}, parent=None, name=None):
+        # Set default values.
+        self.list_style = lists.none()
+        self.text_align = "left"
+        
+        cascading_style.__init__(self, styles, parent, name)
+        
 class style(text_style, box_style, paragraph_style):
     """
     This style contains all the constraint definitions needed to
@@ -139,4 +178,9 @@ class style(text_style, box_style, paragraph_style):
     """
     __constraints__ = {}
 
+    def __init__(self, styles={}, parent=None, name=None):
+        text_style.__init__(self, {}, None, None)
+        box_style.__init__(self, {}, None, None)
+        paragraph_style.__init__(self, {}, None, None)
+        cascading_style.__init__(self, styles, parent, name)
 
