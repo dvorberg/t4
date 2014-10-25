@@ -748,6 +748,9 @@ class section(file_like_buffer):
         this function will make sure that the trailer stays at the
         very end of the section.
         """
+        if what is None:
+            return
+        
         if isinstance(what, comment) and what.name != "+":
             if hasattr(self, what.name):
                 raise AttributeError(
@@ -971,7 +974,7 @@ class defaults_section(section):
     begin = "BeginDefaults"
     end = "EndDefaults"
 
-    page_bounding_box = parsed_property("PageBoundingBox", "nnnn")
+    page_bounding_box = parsed_property("PageBoundingBox", "ffff")
     page_media = parsed_property("PageMedia", "s")
     page_orientation = parsed_property("Page", "s")
     page_process_colors = string_list_property("PageProcessColors")
@@ -1001,7 +1004,7 @@ class page_section(section):
                              "document", "object",
                              "pagetrailer", )
     
-    page_bounding_box = parsed_property("PageBoundingBox", "nnnn", atend=True)
+    page_bounding_box = parsed_property("PageBoundingBox", "ffff", atend=True)
     hires_page_bounding_box = parsed_property("PageHiResBoundingBox",
                                               "ffff", atend=True)
     page_custom_colors = string_list_property("PageCustomColors", atend=True)
@@ -1127,6 +1130,64 @@ class dsc_document(document_section, document):
         ret = dsc_page(self, page_size, label)
         self.append(ret)
         return ret
+
+    def pdfpage(self, page_size="a4", label=None,
+                trim=0, art=0, crop=0, bleed=0):
+        """
+        Return a page that is meant to be used in a document that is
+        destilled to pdf. The page will have a bounding box of the
+        specified `page_size` and the pdfmark operator will be used to
+        define area(s) beyond the page media. The page will be translated
+        so that 0,0 still refers to the lower left corner of the CropBox.
+
+        If the crop, bleed, trim and art parameters, which refer to
+        the CropBox, BleedBox, TrimBox and ArtBox respectively, are a
+        float value, a box of that size will be defined arround the
+        page.  If they are a 4-tuple of floats that tuple is expected
+        to be coordinates of the lower left and upper right corner of
+        the box as specified by the documentation on pdfmark.
+        """
+        w, h = parse_paper_size(page_size)
+        
+        def boxtuple(box):
+            try:
+                box = float(box)
+            except ValueError:
+                pass
+                
+            if type(box) == FloatType:
+                return ( box, box, w + box, h + box, )
+            else:
+                return box
+        
+        def box_command(key, box):
+            if box:
+                tpl = (key,) + boxtuple(box)
+                return "[ /%s [%.2f %.2f %.2f %.2f] /PAGE pdfmark\n" % tpl
+            else:
+                return None
+
+        page = dsc_page(self, page_size, label)
+        self.append(page)
+
+        # If there is a crop specified, enlarge the page by that much and
+        # translate its contents so that from the callers perspective, our
+        # page has the ‘right’ width and hight.
+        trimbox = boxtuple(trim)
+        if trimbox != (0, 0, 0, 0):
+            llx, lly, urx, ury = trimbox
+            page.page_bounding_box = (llx, lly, llx+w, lly+h)
+            print >> page, llx, lly, "translate % pdfpage()"
+        else:        
+            page.page_bounding_box = (0, 0, w, h,)
+
+        page.pagesetup.append(box_command("TrimBox", trim))
+        page.pagesetup.append(box_command("ArtBox", art))
+        page.pagesetup.append(box_command("CropBox", crop))
+        page.pagesetup.append(box_command("BleedBox", bleed))
+
+        
+        return page
 
     def output_file(self): return self
 
@@ -1258,7 +1319,6 @@ class dsc_page(page, page_section):
 
         self.append(pagesetup_section())
         self.trailer = pagetrailer_section()
-        
         
     def write_to(self, fp):
         print >> fp, "%%Page:", self.info
