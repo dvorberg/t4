@@ -123,7 +123,7 @@ def convert(element, styles={}):
                     yield paragraph(current_text_elements)
                     current_text_elements = []
 
-                yield elements.box(boxes(child), style(child))
+                yield elements.box(boxes(child), style=style(child))
                 
         if len(current_text_elements) > 0:
             yield paragraph(current_text_elements)
@@ -132,7 +132,7 @@ def convert(element, styles={}):
         return elements.paragraph(words(text_elements))
             
     def words(text_elements):
-        word = elements.word([])
+        word = elements.word()
         for element in text_elements:
             if isinstance(element, xsc.Text):
                 mystyle = None
@@ -146,13 +146,13 @@ def convert(element, styles={}):
                     if starts_word and len(word) > 0:
                         word[-1]._whitespace_style = syllable._style
                         yield word
-                        word = elements.word([], None)
+                        word = elements.word()
                         
                     word.append(syllable)
                     
                     if ends_word:
                         yield word
-                        word = elements.word([], None)
+                        word = elements.word()
                         
         if len(word) > 0:
             yield word
@@ -186,7 +186,7 @@ def convert(element, styles={}):
                 for syllable in syllables(child, mystyle):
                     yield syllable
 
-    return elements.richtext(boxes(element), style(element))
+    return elements.richtext(boxes(element), style=style(element))
 
 
     
