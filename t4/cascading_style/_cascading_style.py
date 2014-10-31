@@ -40,8 +40,16 @@ class combined_style(object):
     """
     Wrapper object for combining styles.
     """
-    def __init__(self, *styles):
-        self._styles = styles
+    def __init__(self, *styles):    
+        self._styles = []
+        for style in styles:
+            if style is None:
+                continue
+            elif type(style) == types.DictType:
+                style = cascading_style(style, name=repr(style))
+                
+            self._styles.append(style)
+            
         self._name = None
 
     def __getattr__(self, name):
@@ -49,6 +57,11 @@ class combined_style(object):
             try:
                 return style.__getattr__(name)
             except AttributeError:
+                pass
+
+            try:
+                return style[name]
+            except KeyError:
                 pass
 
         raise AttributeError(name)
@@ -93,19 +106,12 @@ class combined_style(object):
 
     def __add__(self, other):
         if other is None:
-            return self
+            return copy.copy(self)
         else:
             return combined_style(other, self)
 
     def __repr__(self):
         return "<" + self.name + ">"
-
-    def iteritems(self):
-        return itertools.chain(*map(lambda style: style.iteritems(),
-                                    self._styles))
-
-    def items(self):
-        return list(self.iteritems())
         
 
 class mutable_cascading_style(name_mangling_dict):
@@ -200,7 +206,7 @@ class mutable_cascading_style(name_mangling_dict):
         
     def __add__(self, other):
         if other is None:
-            return self
+            return copy.copy(self)
         else:
             return combined_style(other, self)
         
