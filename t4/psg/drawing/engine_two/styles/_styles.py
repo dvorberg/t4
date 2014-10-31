@@ -171,7 +171,7 @@ class paragraph_style(cascading_style):
         
         cascading_style.__init__(self, styles, parent, name)
         
-class style(text_style, box_style, paragraph_style):
+class default_style(text_style, box_style, paragraph_style):
     """
     This style contains all the constraint definitions needed to
     render any psg.elements.* object in PostScript.
@@ -182,5 +182,15 @@ class style(text_style, box_style, paragraph_style):
         text_style.__init__(self, {}, None, None)
         box_style.__init__(self, {}, None, None)
         paragraph_style.__init__(self, {}, None, None)
+        cascading_style.__init__(self, styles, parent, name)
+
+class style(text_style, box_style, paragraph_style):
+    """
+    This style contains all the constraint definitions needed to
+    render any psg.elements.* object in PostScript.
+    """
+    __constraints__ = {}
+
+    def __init__(self, styles={}, parent=None, name=None):
         cascading_style.__init__(self, styles, parent, name)
 
