@@ -110,7 +110,7 @@ class box:
         if border:
             self.print_bounding_path()
             # Set color to black, line type to solid and width to 'hairline'
-            print >> self.head, "0 setgray [] 0 setdash 0 setlinewidth"
+            print >> self.head, "0 setgray [] 0 setdash .1 setlinewidth"
             # Draw the line
             print >> self.head, "stroke"
 
