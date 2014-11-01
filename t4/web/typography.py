@@ -158,3 +158,26 @@ def pretty_bytes(bytes):
 def normalize_whitespace(s):
     return " ".join(splitfields(s))
     
+def german_float(s):
+    return float(s.replace(".", "").replace(",", "."))
+
+def pretty_german_float(f):
+    if type(f) == StringType:
+        return f
+        
+    s = str(f)
+    if "." in s:
+        euros, change = split(s, ".")
+        change = "," + change
+    else:
+        euros = s
+        change = ""
+
+    ret = euros[-3:]
+    euros = euros[:-3]
+    
+    while euros:
+        ret = euros[-3:] + "." + ret
+        euros = euros[:-3]
+
+    return euros + ret + change
