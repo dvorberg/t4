@@ -33,7 +33,7 @@ from string import *
 
 from res import *
 
-from t4.web.typography import parse_money
+from t4.web.typography import parse_money, german_float
 
 class ValidatorException(Exception):
     """
@@ -181,8 +181,21 @@ class float_validator(validator):
             except ValueError:
                 raise FloatValidatorException("%s not a float point number." % (
                     repr(value), dbobj, dbproperty, value, ))
+                
+class german_float_validator(validator):
+    """
+    Makes sure the value is a float or can be converted to one.
+    This will remove .s and replace ,s with . 
+    """
+    def check(self, dbobj, dbproperty, value):
+        if value is not None:
+            try:
+                german_float(value)
+            except ValueError:
+                raise FloatValidatorException("%s not a float point number." % (
+                    repr(value), dbobj, dbproperty, value, ))
             
-class money_validator(validator):
+class german_money_validator(validator):
     """
     Makes sure the value is a float or can be converted to one.
     This will remove .s and may replace a decimal , with . 
