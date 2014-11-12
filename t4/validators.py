@@ -192,8 +192,9 @@ class german_float_validator(validator):
             try:
                 german_float(value)
             except ValueError:
-                raise FloatValidatorException("%s not a float point number." % (
-                    repr(value), dbobj, dbproperty, value, ))
+                raise FloatValidatorException(
+                    "%s not a (German) float point number." % (
+                        repr(value), dbobj, dbproperty, value, ))
             
 class german_money_validator(validator):
     """
