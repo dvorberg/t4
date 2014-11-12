@@ -159,25 +159,48 @@ def normalize_whitespace(s):
     return " ".join(splitfields(s))
     
 def german_float(s):
-    return float(s.replace(".", "").replace(",", "."))
+    """
+    Parse a string containing a German float-point number (.s separate
+    1000s, and decimal comma) into a float.
+    """
+    # Replace , with .
+    s = s.replace(",", ".")
 
-def pretty_german_float(f):
+    # Remove all .s except the last one.
+    parts = s.split(".")
+    if len(parts) > 2:
+        s = ".".join(parts[:-1]) + "." + parts[-1]
+        
+    return float(s)
+
+def pretty_german_float(f, decimals=2):
+    """
+    Return a German representation of a float point number as a
+    string. If passed a string as first paramter, return it verbatin.
+    """
     if type(f) == StringType:
         return f
         
-    s = str(f)
-    if "." in s:
-        euros, change = split(s, ".")
-        change = "," + change
-    else:
-        euros = s
-        change = ""
-
-    ret = euros[-3:]
-    euros = euros[:-3]
+    f = float(f)
     
-    while euros:
-        ret = euros[-3:] + "." + ret
-        euros = euros[:-3]
+    if f < 0:
+        negative = True
+        f *= -1
+    else:
+        negative = False
+        
+    s = "%f" % f
+    euros, cents = split(s, ".")
 
-    return euros + ret + change
+    while cents.endswith("0"):
+        cents = cents[:-1]
+
+    if cents:
+        s = euros + "," + cents
+    else:
+        s = euros
+    
+    if negative:
+        return "-" + s
+    else:
+        return s
