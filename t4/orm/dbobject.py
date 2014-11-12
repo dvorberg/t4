@@ -408,12 +408,18 @@ class dbobject(object):
     __select_columns__ = classmethod(__select_columns__)
 
 
-    def __dbattribute_names__(cls):
+    def __dbattribute_names__(cls, include_relationships=True):
         """
-        Return the list of our dbpropertie's attribute names.
+        Return the list of our dbproperties’ attribute names.
         """
-        return map(lambda dbprop: dbprop.attribute_name,
-                   cls.__dbproperties__())
+        if include_relationships:
+            props = cls.__dbproperties__()
+        else:
+            from relationships import relationship
+            props = filter(lambda prop: not isinstance(prop, relationship),
+                           cls.__dbproperties__())
+            
+        return map(lambda dbprop: dbprop.attribute_name, props)
         
     __dbattribute_names__ = classmethod(__dbattribute_names__)
         
