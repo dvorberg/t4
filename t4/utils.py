@@ -30,29 +30,41 @@ from random import random
 from string import *
 from types import *
 
+password_specials = "+-/*!&#;$,@§"
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
-    digits = "123456789"
+    digits = "0123456789"
     letters_and_digits = letters + digits
-    specials = "+-/*!&#;"
 
-    if use_specials:
-        # Use at least one letter and one special char.
-        length -= 2
-    
     ret = []
     ret.append(letters[int(random() * len(letters))])
     for a in range(length-1):
         ret.append(letters_and_digits[int(random() * len(letters_and_digits))])
 
     if use_specials:
-        for a in ( digits, specials, ):
+        for a in ( digits, password_specials, ):
             idx = int(random() * (len(ret)-1)) + 1
             ret.insert(idx, a[int(random() * len(a))])
 
     if len(ret) > length: ret = ret[:length]
     ret = join(ret, "")
     return ret
+
+def password_good_enough(password):
+    if len(password) < 8:
+        return False
+        
+    def contains_one_of(s):
+        for a in s:
+            if a in password:
+                return True
+        else:
+            return False
+
+    return contains_one_of("ABCDEFGHJKLMNPQRSTUVWYXZ") and \
+        contains_one_of("abcdefghijkmnpqrstuvwyxz") and \
+        contains_one_of("0123456789") and \
+        contains_one_of(password_specials) 
 
 def slug(length=10):
     return random_password(length, False)
