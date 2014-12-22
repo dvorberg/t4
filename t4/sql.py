@@ -59,6 +59,7 @@ from string import *
 from types import *
 
 from t4.debug import sqllog
+from t4.web.typography import normalize_whitespace
 
 NULL = "NULL" 
 
@@ -531,7 +532,15 @@ class expression:
     def __eq__(self, other):
         return other.__class__ == self.__class__ and \
             self._identifyer is not None and \
-            self._identifyer == other._identifyer 
+            self._identifyer == other._identifyer
+
+    def __repr__(self):
+        if self._identifyer is None:
+            ident = ""
+        else:
+            ident = " named %s" % repr(self._identifyer)
+        expr = normalize_whitespace(join(map(str, self._parts), " "))
+        return "<expression %s%s>" % ( expr, ident, )
         
     def __hash__(self):
         if self._identifyer is None:
