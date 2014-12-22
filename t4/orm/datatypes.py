@@ -181,14 +181,14 @@ class datatype(property):
         for data retrieved from the RDBMS. See below.
         """
         self.check_dbobj(dbobj)
-        
+
         if isinstance(value, sql.expression):
             setattr(dbobj, " expression" + self.data_attribute_name(), value)
             if self.isset(dbobj):
                 # Remove the current value from the dbobj so we don't
                 # return a value that's not in sync with the database.
                 delattr(dbobj, self.data_attribute_name())                
-                dbobj.__register_change__(self)
+            dbobj.__register_change__(self)
         else:
             if value is not None: value = self.__convert__(value)
 
@@ -592,9 +592,9 @@ class wrapper(datatype):
     def __eq__(self, other):
         """
         This will let the in in L{datatype.check_dbobj} yield True.
-        """        
-        return other == self.inside_datatype
-        
+        """
+        return other.inside_datatype == self.inside_datatype
+
     def __copy__(self):
         raise NotImplementedError( "All classes derived from wrapper must "
                                    "overload the __copy__ method for "
@@ -765,7 +765,8 @@ class expression(wrapper):
 
             exp = n
 
-        self._expression = sql.expression(*exp)
+        identifyer = "%s-identifyer" % self.column.name()
+        self._expression = sql.expression(*exp, _identifyer=identifyer)
 
     def select_expression(self, dbclass, full_column_names):
         return self._expression
@@ -773,6 +774,10 @@ class expression(wrapper):
     def __copy__(self):
         return expression(self.inside_datatype, self.expression)
     
+    def __repr__(self):
+        return "<expression %s of type %s>" % ( self._expression,
+                                                repr(self.inside_datatype), )
+        
 class property_group(datatype):
     """
     This datatype will manage several columns of the same datatype
