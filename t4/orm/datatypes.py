@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002-2014 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -219,11 +219,27 @@ class datatype(property):
         """
         return hasattr(dbobj, self.data_attribute_name())
 
-    def isexpression(self, dbobj):
-        return hasattr(dbobj, " expression" + self.data_attribute_name())
+    def update_expression(self, dbobj):
+        """
+        The expression this function returns is used in INSERT and UPDATE
+        statements to represet this column’s value. May return None. 
+        """
+        if hasattr(dbobj, " expression" + self.data_attribute_name()):
+            return getattr(dbobj, " expression" + self.data_attribute_name())
+        else:
+            return self.sql_literal(dbobj)
 
-    def expression(self, dbobj):
-        return getattr(dbobj, " expression" + self.data_attribute_name())
+    def select_expression(self, dbclass, full_column_names):
+        """
+        The expression this function returns is used to SELECT this column
+        from the database.
+        """
+        if full_column_names:
+            return sql.column(self.column.name(), dbclass.__relation__,
+                              self.column.quote())
+        else:
+            return self.column
+        
     
     def __convert__(self, value):
         """
@@ -255,21 +271,13 @@ class datatype(property):
             else:
                 return self.sql_literal_class(value)
     
-    def __select_this_column__(self):
-        """
-        Indicate whether this column shall be included in SELECT statements.
-        True by default, it will return False for most relationships.
-        """
-        return True
-
     def __select_after_insert__(self, dbobj):
         """
         Indicate whether this column needs to be SELECTed after the dbobj has
         been inserted to pick up information supplied by backend as by SQL
         default values and auto increment columns.
         """
-        return (self.has_default and not self.isset(dbobj)) or \
-            self.isexpression(dbobj)
+        return (self.has_default and not self.isset(dbobj))
 
     def __delete__(self, dbobj):
         raise NotImplementedError(
@@ -532,6 +540,7 @@ class common_serial(integer):
 
     def __set_from_result__(self, ds, dbobj, value):
         integer.__set_from_result__(self, ds, dbobj, value)
+        
 
 
 class _inside_method:
@@ -647,8 +656,8 @@ class delayed(wrapper):
 
             return ret
             
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, *args):
         return False
@@ -895,12 +904,11 @@ class property_group(datatype):
     def sql_literal(self, dbobj):
         return None
 
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, dbobj):
         return False
-
     
     class result:
         def __init__(self, parent_dbproperty, dbobj):
@@ -1039,7 +1047,7 @@ class pickle(datatype):
             if value is None:
                 return sql.NULL
             else:
-                pickled = pickle.dumps(value, self.pickle_protocol)
+                pickled = cPickle.dumps(value, self.pickle_protocol)
                 return sql.string_literal(pickled)
     
 class python_literal(datatype):

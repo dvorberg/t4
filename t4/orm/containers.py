@@ -94,12 +94,9 @@ class _container(datatype):
         "This container cannot be represented as an SQL literal."
         return None
 
-    def __select_this_column__(self):
-        """
-        @returns: False. Containers do not need to select anything.
-        """
-        return False
-
+    def select_expression(self, dbclass, full_column_names):
+        return None
+    
     def __select_after_insert__(self, dbobj):
         """
         @returns: False. Containers to not need to select anything,

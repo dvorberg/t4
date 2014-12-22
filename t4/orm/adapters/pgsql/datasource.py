@@ -384,7 +384,7 @@ class datasource(t4.orm.datasource.datasource_base, sql.pgsql_backend):
         elif isinstance(primary_key_attribute, common_serial):
             relident = dbobj.__relation__._name
             seqname = sql.identifyer(relident.name() + "_id_seq",
-                                     identifyer.quotes())
+                                     False)
             
             where = sql.where(sql.expression( "id = ",
                                               "currval('", seqname, "')"))

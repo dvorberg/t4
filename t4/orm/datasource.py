@@ -463,14 +463,12 @@ class datasource_base:
         sql_columns = []
         sql_values = []
         for property in dbobj.__dbproperties__():
-            if property.isset(dbobj) and \
-                   property.column not in sql_columns and \
-                   property.sql_literal(dbobj) is not None:                
-                sql_columns.append(property.column)
-                sql_values.append(property.sql_literal(dbobj))
-            elif property.isexpression(dbobj):
-                sql_columns.append(property.column)
-                sql_values.append(property.expression(dbobj))                
+            
+            if property.isset(dbobj) and property.column not in sql_columns:
+                update_expression = property.update_expression(dbobj)
+                if update_expression is not None:
+                    sql_columns.append(property.column)
+                    sql_values.append(update_expression)
 
         if len(sql_columns) == 0:
             raise DBObjContainsNoData(

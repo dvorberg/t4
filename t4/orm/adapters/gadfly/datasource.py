@@ -42,14 +42,15 @@ from sets import Set
 import re
 
 # orm
-from orm2.datasource import datasource_base
-from orm2.debug import sqllog, debug
-from orm2.exceptions import *
-from orm2.datatypes import common_serial
-from orm2 import sql
-from orm2.util import stupid_dict
+from t4.orm.datasource import datasource_base
+from t4.orm.exceptions import *
+from t4.orm.datatypes import common_serial
 
-import orm2.datasource
+from t4 import sql
+from t4.debug import sqllog, debug
+from t4.utils import stupid_dict
+
+import t4.orm.datasource
 
 from gadfly import gadfly
 
@@ -66,7 +67,7 @@ class datasource(datasource_base):
         /tmp directory. Gadfly will create a number of files called dbname.*
         there.
         """        
-        orm2.datasource.datasource_base.__init__(self)
+        t4.orm.datasource.datasource_base.__init__(self)
 
         self._conn = gadfly()
         self._conn.startup(dbname, directory)

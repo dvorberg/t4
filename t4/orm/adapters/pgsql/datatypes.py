@@ -268,8 +268,8 @@ class tsvector(datatype):
         else:
             return "NULL"
 
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, dbobj):
         return False

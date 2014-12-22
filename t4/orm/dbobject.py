@@ -259,10 +259,7 @@ class dbobject(object):
         else:
             info = {}
             for column, datatype in self.__changed_columns__.items():
-                if datatype.isexpression(self):
-                    info[column] = datatype.expression(self)
-                else:
-                    info[column] = datatype.sql_literal(self)
+                info[column] = datatype.update_expression(self)
 
             statement = sql.update(self.__relation__,
                                    self.__primary_key__.where(),
@@ -390,21 +387,9 @@ class dbobject(object):
         """
         columns = []
         for property in cls.__dbproperties__():
-            if property.__select_this_column__():
-                # I'm wondering if this is smart:
-                # datatypes.expression sets its column attribute to an
-                # sql.expression object. This makes joins work, but
-                # creates a danger of ambiguities.
-                if full_column_names and \
-                        not isinstance(property.column, sql.expression):
-                    new = sql.column(property.column.name(),
-                                     cls.__relation__,
-                                     property.column.quote())
-                else:
-                    new = property.column
-
-                if not new in columns:
-                    columns.append(new)
+            new = property.select_expression(cls, full_column_names)
+            if new is not None and not new in columns:
+                columns.append(new)
               
         return columns
     
