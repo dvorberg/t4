@@ -102,16 +102,13 @@ class bytea(datatype):
 blob = bytea
 
 
-class money_literal(sql.string_literal):
+class money_literal(sql.literal):
     """
     The string representation of the passed value is transferred to the
     database and converted to MONEY there. 
     """
     def __init__(self, value):
-        sql.string_literal.__init__(self, str(value))
-
-    def __sql__(self, runner):
-        return sql.string_literal.__sql__(self, runner) + "::money"
+        sql.literal.__init__(self, str(value) + "::money")
 
 
 class money(datatype):
@@ -121,15 +118,20 @@ class money(datatype):
     PostgreSQL on use. Output will be casted to NUMERIC on SELECT and
     will be returned as a decimal.Decimal instance.
     """
-    python_class = str
     sql_literal_class = money_literal
     
-    def __init_dbclass__(self, dbclass, attribute_name):
-        datatype.__init_dbclass__(self, dbclass, attribute_name)
-        self.column = sql.expression(self.column, "::NUMERIC")
-
     def __convert__(self, value):
+        print "__convert__ value =", repr(value)
         return value
+
+    def __set_from_result__(self, ds, dbobj, value):
+        print "__set_from_result__ value =", repr(value)
+        setattr(dbobj, self.data_attribute_name(),
+                self.__convert__(value))    
+
+    def select_expression(self, dbclass, full_column_names):
+        return sql.expression(datatype.select_expression(
+                self, dbclass, full_column_names), "::NUMERIC")
         
 
 class inet(string):
