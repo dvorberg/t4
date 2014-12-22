@@ -716,9 +716,6 @@ class many2one(relationship):
         Set the child object to `value'. If the child object has not been
         inserted, yet it will be by this function.
         """
-        print "-"*60
-        print "__SET__"
-        print "-"*60
         if value is None:
             if self.column is not None:
                 datatype.__set__(self, dbobj, None)
@@ -742,7 +739,6 @@ class many2one(relationship):
 
             if self.column is not None:
                 key = value.__primary_key__.attribute().__get__(value)
-                print "key =", repr(key)
                 assert key is not None, ValueError
                 datatype.__set__(self, dbobj, key)
             else:
