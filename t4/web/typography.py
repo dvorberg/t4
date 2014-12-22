@@ -70,6 +70,10 @@ def improve_typography_html(content, lang):
 
     # Put long dashes where they (might) belog
     content = replace(content, " - ", "&#150;")
+
+    # Ellipsis
+    content = replace(content, " ...", "&nbsp;&hellip;")
+    content = replace(content, "...", "&hellip;")
     
     return content
 
@@ -99,6 +103,10 @@ def improve_typography_unicode(content, lang):
     # Put long dashes where they (might) belog
     content = replace(content, " - ", " — ")
 
+    # Ellipsis
+    content = replace(content, " ...", " …")
+    content = replace(content, "...", "…")
+    
     return content
 
 def pretty_money(m, form=False):
