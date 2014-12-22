@@ -504,10 +504,11 @@ class expression:
     >>> sql()( expression('COUNT(amount) + ', 10) )
     ==> COUNT(amount) + 10
     """
-    def __init__(self, *parts):
+    def __init__(self, *parts, **kw):
         self._parts = []
         self._append(parts)
         self._name = "<<EXPRESSION>>"
+        self._identifyer = kw.get("_identifyer", None)
 
     def _append(self, parts):
         for part in parts:
@@ -526,6 +527,18 @@ class expression:
         ret.parts = self._parts + other._parts
 
         return ret
+
+    def __eq__(self, other):
+        return other.__class__ == self.__class__ and \
+            self._identifyer is not None and \
+            self._identifyer == other._identifyer 
+        
+    def __hash__(self):
+        if self._identifyer is None:
+            raise ValueError("sql.expression objects can only be hashed "
+                             "if their _identifyer is set.")
+        return hash(self._identifyer)
+
 
 class as_(expression):
     """
