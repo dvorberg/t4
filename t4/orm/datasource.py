@@ -315,10 +315,11 @@ class datasource_base:
             # joins. (And t4.sql can't know about dbclasses).
             if isinstance(clause, sql.group_by) and \
                     len(clause._columns) == 1 and \
-                    hasattr(clause._columns[0], "__select_columns__"):
-                clause._columns = clause._columns[0].__select_columns__(True)
+                    hasattr(clause._columns[0], "__select_expressions__"):
+                clause._columns = clause._columns[0].__select_expressions__(
+                    True)
                 
-        query = sql.select(dbclass.__select_columns__(full_column_names),
+        query = sql.select(dbclass.__select_expressions__(full_column_names),
                            dbclass.__relation__, *clauses)
         
         return self.run_select(dbclass, query)

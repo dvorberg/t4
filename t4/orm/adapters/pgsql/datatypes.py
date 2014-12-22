@@ -97,6 +97,7 @@ class bytea_literal(sql.literal):
         return "%s"
 
 class bytea(datatype):
+    python_class = str
     sql_literal_class = bytea_literal
 
 blob = bytea
