@@ -122,17 +122,17 @@ class money(datatype):
     sql_literal_class = money_literal
     
     def __convert__(self, value):
-        print "__convert__ value =", repr(value)
         return value
 
     def __set_from_result__(self, ds, dbobj, value):
-        print "__set_from_result__ value =", repr(value)
         setattr(dbobj, self.data_attribute_name(),
                 self.__convert__(value))    
 
     def select_expression(self, dbclass, full_column_names):
-        return sql.expression(datatype.select_expression(
-                self, dbclass, full_column_names), "::NUMERIC")
+        identifyer = "%s-money-expression" % self.column.name()
+        return sql.expression(
+            datatype.select_expression(self, dbclass, full_column_names),
+            "::NUMERIC", _identifyer=identifyer)
         
 
 class inet(string):
