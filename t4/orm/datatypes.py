@@ -764,8 +764,13 @@ class expression(wrapper):
 
             exp = n
 
-        self.column = sql.expression(*exp)
+        self._expression = sql.expression(*exp)
+        self.column = None
 
+    def select_expression(self, dbclass, full_column_names):
+        return self._expression
+        
+        
     def __copy__(self):
         return expression(self.inside_datatype, self.expression)
     
