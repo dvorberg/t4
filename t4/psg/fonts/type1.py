@@ -25,11 +25,11 @@
 ##
 ##  I have added a copy of the GPL in the file gpl.txt.
 
-
-
 """
 This module contains code to handle PostScript Type1 fonts.
 """
+
+import os.path as op
 from types import *
 
 from font import font
@@ -71,10 +71,37 @@ class type1(font):
     def has_char(self, unicode_char_code):
         return self.metrics.has_key(unicode_char_code)
 
-
     def main_font_file(self):
         return self._main_font_file
 
     def afm_file(self):
         return self._afm_file
         
+class lazy_loader(type1):
+    """
+    A wrapper class that can be used like a function. Using
+    t4.psg.fonts.computer_modern.sans_serif().
+    """
+    def __init__(self, filename):
+        self.__font_filename = filename
+        self.__font = None
+
+    def here(self):
+        """
+        Return the directory path where to search for `filename`.
+        """
+        raise NotImplemented()
+        
+    def __call__(self):
+        if self.__font is None:
+            shapes = op.join(self.here(), self.__font_filename + ".pfb")
+            metric = op.join(self.here(), self.__font_filename + ".afm")
+        
+            self.__font = type1(shapes, metric)
+            
+        return self.__font
+
+    def __getattr__(self, name):
+        # This will load the font when used for the first time.
+        return getattr(self(), name)
+

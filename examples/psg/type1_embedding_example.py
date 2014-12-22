@@ -71,7 +71,7 @@ def main():
     # width = the width of the string
     width = font.metrics.stringwidth(text, font_size)
     
-    tb = textbox(margin, margin, width+5, font_size)
+    tb = textbox(page, margin, margin, width+5, font_size)
     tb.set_font(font_wrapper, font_size)
     tb.typeset(text)
 

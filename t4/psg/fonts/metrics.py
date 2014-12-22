@@ -25,8 +25,6 @@
 ##
 ##  I have added a copy of the GPL in the file gpl.txt.
 
-
-
 """
 This module defines a generic class for font metrics.
 """
@@ -90,6 +88,9 @@ class metrics(dict):
         """
         return self.keys()
 
+    def charwidth(self, s, font_size):
+        return self.get(s, self[32]).width * font_size / 1000.0
+        
     def stringwidth(self, s, font_size, kerning=True, char_spacing=0.0):
         """
         Return the width of s when rendered in the current font in
@@ -99,7 +100,7 @@ class metrics(dict):
         parameter is in regular PostScript units, too.
         """
         if len(s) == 1:
-            return self.get(ord(s), self[32]).width * font_size / 1000.0
+            return self.charwidth(ord(s[0]), font_size)
         else:
             width = sum(map(lambda char: self.get(ord(char), self[32]).width,
                             s)) * font_size

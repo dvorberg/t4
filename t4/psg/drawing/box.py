@@ -54,7 +54,7 @@ class box:
     page, a width, and a height. In other words: A bounding box. The
     box class provides a mechanism to store PostScript code: It
     maintinas lists called head, body and tail, which contain
-    PostScript statements to draw the box's content. The PosrScript
+    PostScript statements to draw the box's content. The PostScript
     you use is arbitrary with one exceptions: code produced by the box
     is supposed to restore the PostScript graphic context to the same
     state it encountered it in. That's why it unconditionally push()es
@@ -67,7 +67,7 @@ class box:
     The box class provides two alternative constructors: from_bounding_box
     and from_center.
     """
-    def __init__(self, parent, x, y, w, h, border=False, clip=False):
+    def __init__(self, parent, x, y, w=0, h=0, border=False, clip=False):
         """
         Construct a box with lower left corner (x, y), with w and
         height h.
@@ -110,7 +110,7 @@ class box:
         if border:
             self.print_bounding_path()
             # Set color to black, line type to solid and width to 'hairline'
-            print >> self.head, "0 setgray [] 0 setdash 0 setlinewidth"
+            print >> self.head, "0 setgray [] 0 setdash .1 setlinewidth"
             # Draw the line
             print >> self.head, "stroke"
 
@@ -221,7 +221,7 @@ class canvas(box):
     corner.
     """
     
-    def __init__(self, parent, x, y, w, h, border=False, clip=False, **kw):
+    def __init__(self, parent, x, y, w=0, h=0, border=False, clip=False, **kw):
         box.__init__(self, parent, x, y, w, h, border, clip)
 
         # Move the origin to the lower left corner of the bounding box
@@ -657,7 +657,28 @@ class _eps_image(box):
             print >> self
             print >> self, "%%EndDocument"
             print >> self, "psg_end_epsf"
-            
+
+    def fit(self, canvas):
+        """
+        Fit this image into `canvas` so that it will set at (0,0) filling
+        as much of the canvas as possible.  Return the size of the
+        scaled image as a pair of floats (in PostScript units).
+        """
+        w = canvas.w()
+        factor = w / self.w()
+        h = self.h() * factor
+
+        if h > canvas.h():
+            h = canvas.h()
+            factor = h / self.h()
+            w = self.w() * factor
+
+        print >> canvas, "gsave"
+        print >> canvas, factor, factor, "scale"
+        canvas.append(self)
+        print >> canvas, "grestore"
+
+        return w, h,
         
 class eps_image(_eps_image):
     """
@@ -748,6 +769,9 @@ class raster_image(_eps_image):
         width, height = pil_image.size
         bb = bounding_box(0, 0, width, height)
 
+        if pil_image.mode != "CMYK":
+            pil_image = pil_image.convert("CMYK")
+            
         fp = self.raster_image_buffer(pil_image)
 
         _eps_image.__init__(self, parent, fp, bb, document_level, border, clip)

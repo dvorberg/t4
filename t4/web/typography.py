@@ -101,7 +101,7 @@ def improve_typography_unicode(content, lang):
     content = re.sub(date_until_re, r"\1.–\2.", content)
 
     # Put long dashes where they (might) belog
-    content = replace(content, " - ", " — ")
+    content = replace(content, u" - ", u" — ")
 
     # Ellipsis
     content = replace(content, " ...", " …")
@@ -166,3 +166,49 @@ def pretty_bytes(bytes):
 def normalize_whitespace(s):
     return " ".join(splitfields(s))
     
+def german_float(s):
+    """
+    Parse a string containing a German float-point number (.s separate
+    1000s, and decimal comma) into a float.
+    """
+    # Replace , with .
+    s = s.replace(",", ".")
+
+    # Remove all .s except the last one.
+    parts = s.split(".")
+    if len(parts) > 2:
+        s = ".".join(parts[:-1]) + "." + parts[-1]
+        
+    return float(s)
+
+def pretty_german_float(f, decimals=2):
+    """
+    Return a German representation of a float point number as a
+    string. If passed a string as first paramter, return it verbatin.
+    """
+    if type(f) == StringType:
+        return f
+        
+    f = float(f)
+    
+    if f < 0:
+        negative = True
+        f *= -1
+    else:
+        negative = False
+        
+    s = "%f" % f
+    euros, cents = split(s, ".")
+
+    while cents.endswith("0"):
+        cents = cents[:-1]
+
+    if cents:
+        s = euros + "," + cents
+    else:
+        s = euros
+    
+    if negative:
+        return "-" + s
+    else:
+        return s

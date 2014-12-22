@@ -32,6 +32,7 @@ from string import *
 # Zope
 import Globals
 from OFS.SimpleItem import SimpleItem
+from AccessControl import getSecurityManager, Unauthorized
 
 from t4.orm.adapters.pgsql.datasource import datasource as pgsql_datasource
 from t4.orm.datasource import datasource_base
@@ -143,18 +144,20 @@ class t4orm_pool(SimpleItem):
         """
         Return the data connection used by this pool
         """
-        return self.restrictedTraverse(self.da_id)
+        try:
+            return self.restrictedTraverse(self.da_id)
+        except Unauthorized:
+            return None
 
     def _pool(self):
         """
         Return a _pool object that fits the DA's backend.
         """
         da = self.da()
-        if da.meta_type == "Z Psycopg 2 Database Connection":
+        if da is not None and da.meta_type == "Z Psycopg 2 Database Connection":
             return _pgsql_pool(self)
         else:
-            raise TypeError("Don't know how to work with a " + \
-                                repr(da.meta_type))
+            raise TypeError("Don't know how to work with a " + repr(da))
         
     def pool(self):
         r = self.REQUEST

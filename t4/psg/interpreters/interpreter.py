@@ -3,7 +3,7 @@
 
 ##  This file is part of psg, PostScript Generator.
 ##
-##  Copyright 2006-12 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2006-14 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -170,19 +170,3 @@ class interpreter:
             return ( font_class, init_args, )
         else:
             return font_class(*init_args)
-            
-                        
-            
-
-
-        
-# Local variables:
-# mode: python
-# ispell-local-dictionary: "english"
-# End:
-
-
-
-
-
-

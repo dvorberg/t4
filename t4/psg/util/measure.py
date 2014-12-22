@@ -105,7 +105,10 @@ PAPERSIZES = {
 
 
 def parse_paper_size(name, allow_arbitrary=False):
-    if name.endswith("landscape"):
+    if type(name) == TupleType:
+        return name
+        
+    elif name.endswith("landscape"):
         name = strip(name[:-len("landscape")])
         value = parse_paper_size(name, allow_arbitrary)
         return value[1], value[0]

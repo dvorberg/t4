@@ -24,14 +24,6 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 
-#
-# $Log: font_embedding_test.py,v $
-# Revision 1.1  2006/09/08 12:55:38  t4w00-diedrich
-# Initial commit
-#
-#
-#
-
 """
 Print the full name of a font into an EPS file. You'll need to supply
 an outline and a metrics file on the command line. The resulting ps
@@ -39,10 +31,10 @@ will be written to stdout.
 """
 
 import sys
-from psg.document.dsc import eps_document
-from psg.drawing.box import *
-from psg.fonts.type1 import type1
-from psg.util import *
+from t4.psg.document.dsc import eps_document
+from t4.psg.drawing.box import *
+from t4.psg.fonts.type1 import type1
+from t4.psg.util import *
 
 def main():
     if len(sys.argv) < 3:
@@ -91,11 +83,4 @@ def main():
     eps.write_to(sys.stdout)
 
 main()    
-
-
-
-# Local variables:
-# mode: python
-# ispell-local-dictionary: "english"
-# End:
 

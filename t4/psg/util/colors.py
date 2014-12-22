@@ -28,6 +28,10 @@
 def rgb(r, g, b):
     return "%f %f %f setrgbcolor " % ( float(r), float(g), float(b), )
 
+def cmyk(c, m, y, k):
+    return "%f %f %f %f setcmykcolor " % ( float(c), float(m),
+                                           float(y), float(k), )
+    
 def grey(g):
     return "%f setgray " % float(g)
 
@@ -73,6 +77,16 @@ class rgb_color(color):
     def __str__(self):
         return rgb(self.r, self.g, self.b)
 
+class cmyk_color(color):
+    def __init__(self, c, m, y, k):
+        self.c = c
+        self.m = m
+        self.y = y
+        self.k = k
+
+    def __str__(self):
+        return cmyk(self.c, self.m, self.y, self.k)
+        
 class grey_color(color):
     def __init__(self, g):
         self.g = g
@@ -91,5 +105,17 @@ class web_color(color):
 white = grey_color(1.0)
 black = grey_color(0.0)
 
+red = rgb_color(1, 0, 0)
+green = rgb_color(0, 1, 0)
+blue = rgb_color(0, 0, 1)
+
+class transparent_color(color):
+    def __str__(self):
+        return ""
+
+    def __nonzero__(self):
+        return False
+
+transparent = transparent_color()
 
         

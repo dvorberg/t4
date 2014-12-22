@@ -240,7 +240,10 @@ class dbobject(object):
                 prop.__init_dbclass__(self.__class__, name)
 
         self.__update_from_dict__(kw)
-        
+
+        if self.__primary_key__ == ():
+            self.__primary_key__ = None
+            
         if self.__primary_key__ is not None:
             self.__primary_key__ = keys.primary_key(self)
 
@@ -408,12 +411,18 @@ class dbobject(object):
     __select_columns__ = classmethod(__select_columns__)
 
 
-    def __dbattribute_names__(cls):
+    def __dbattribute_names__(cls, include_relationships=True):
         """
-        Return the list of our dbpropertie's attribute names.
+        Return the list of our dbproperties’ attribute names.
         """
-        return map(lambda dbprop: dbprop.attribute_name,
-                   cls.__dbproperties__())
+        if include_relationships:
+            props = cls.__dbproperties__()
+        else:
+            from relationships import relationship
+            props = filter(lambda prop: not isinstance(prop, relationship),
+                           cls.__dbproperties__())
+            
+        return map(lambda dbprop: dbprop.attribute_name, props)
         
     __dbattribute_names__ = classmethod(__dbattribute_names__)
         
@@ -499,12 +508,13 @@ class dbobject(object):
                          self.__primary_key__.where())
         self.__ds__().execute(cmd)
 
-    def __update_from_dict__(self, kw):
+    def __update_from_dict__(self, kw, ignore_extra_keys=False):
         for name, value in kw.items():
             if self.__class__.__dict__.has_key(name):
                 self.__class__.__dict__[name].__set__(self, value)
             else:
-                raise NoSuchAttributeOrColumn(name)
+                if not ignore_extra_keys:
+                    raise NoSuchAttributeOrColumn(name)
 
     def __as_dict__(self):
         """
