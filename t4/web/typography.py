@@ -191,7 +191,8 @@ def pretty_german_float(f, decimals=2):
     if f is None:
         return ""
         
-    f = float(f)
+    # f = float(f) Don’t do that. If this is a decimal.Decimal, we’d loose
+    # precision!
     
     if f < 0:
         negative = True
