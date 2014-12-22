@@ -188,6 +188,8 @@ def pretty_german_float(f, decimals=2):
     """
     if type(f) == StringType:
         return f
+    if f is None:
+        return ""
         
     f = float(f)
     
