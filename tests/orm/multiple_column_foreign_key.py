@@ -32,15 +32,15 @@ This tests foreing keys with multiple columns.
 import os, unittest
 from string import *
 
-from orm2.debug import sqllog
-# sqllog.verbose = True
+from t4.debug import sqllog
+sqllog.verbose = True
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.relationships import *
-from orm2 import sql
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.relationships import *
+from t4 import sql
 
-from orm2.datasource import datasource
+from t4.orm.datasource import datasource
 
 
 # Model
@@ -63,7 +63,7 @@ domain.emails = one2many(email, child_key=("remote_part_domain",
 
 class domain_and_email_test(unittest.TestCase):
     def setUp(self):
-        self.ds = datasource("adapter=gadfly")
+        self.ds = datasource(os.getenv("ORMTEST_PGSQL_CONN"))
 
         self.ds.execute("""CREATE TABLE domain (
                              domain VARCHAR,
@@ -71,12 +71,15 @@ class domain_and_email_test(unittest.TestCase):
                            )""")
         
         self.ds.execute("""CREATE TABLE email (
-                             id INTEGER,
+                             id SERIAL,
                              local_part VARCHAR,
                              remote_part_domain VARCHAR,
                              remote_part_tld VARCHAR
                            )""")
 
+    def tearDown(self):
+        self.ds.close()
+        
     data = ( ("tux4web.de", ("info", "support", "diedrich", "spam"),),
              ("apple.com", ("steve", "store", "webmaster",),),)
 
@@ -145,6 +148,11 @@ class domain_and_email_test_pgsql(domain_and_email_test):
                                 REFERENCES domain (domain, tld)
                            )""")
 
+    def tearDown(self):
+        self.ds.execute("DROP TABLE IF EXISTS domain CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS email CASCADE")
+        self.ds.commit()
+        self.ds.close()
 
 class domain_and_email_test_mysql(domain_and_email_test):
     def setUp(self):
@@ -173,10 +181,12 @@ class domain_and_email_test_mysql(domain_and_email_test):
                            )""")
 
 
+    def tearDown(self):
+        self.ds.close()
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(domain_and_email_test))
+    #suite.addTest(unittest.makeSuite(domain_and_email_test))
 
     if os.environ.has_key("ORMTEST_PGSQL_CONN"):
         suite.addTest(unittest.makeSuite(domain_and_email_test_pgsql))

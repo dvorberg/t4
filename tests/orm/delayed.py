@@ -26,20 +26,20 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 """
-This module tests the L{orm2.datatypes.delayed} datatype wrapper.
+This module tests the L{t4.orm.datatypes.delayed} datatype wrapper.
 """
 
 import os, unittest
 from string import *
 
-from orm2.debug import sqllog
+from t4.debug import sqllog
 sqllog.verbose = True
 sqllog.buffer_size = 10 # keep the last 10 sql commands sent to the backend
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.datasource import datasource
-from orm2.util.datatypes import pickle
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.datasource import datasource
+from t4.orm.datatypes import pickle
 
 class person(dbobject):
     """
@@ -57,12 +57,12 @@ class person_insert_test(unittest.TestCase):
     """
     
     def setUp(self):
-        self.ds = datasource("adapter=gadfly")
+        self.ds = datasource(os.getenv("ORMTEST_PGSQL_CONN"))
 
         self.ds.execute("""CREATE TABLE person (
-                             id INTEGER,
+                             id SERIAL,
                              name VARCHAR,
-                             image VARCHAR ) """, modify=True)
+                             image VARCHAR ) """)
         
     def test_simple(self):
         sample = person(name = u"Me",
@@ -72,8 +72,6 @@ class person_insert_test(unittest.TestCase):
         
         result = self.ds.select(person)
         me = result.next()
-        self.assertEqual(sqllog.queries[-1], "SELECT name, id FROM person")
-        
         self.assertEqual(me.image, "Incredibly long image data string")
 
         #self.assertEqual(sqllog.queries[-1],
@@ -83,9 +81,7 @@ class person_insert_test(unittest.TestCase):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(person_insert_test))
-
-        
+    suite.addTest(unittest.makeSuite(person_insert_test))        
     unittest.TextTestRunner(verbosity=2).run(suite)
 
 

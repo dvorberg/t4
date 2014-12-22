@@ -26,19 +26,19 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 """
-This module tests the L{orm2.util.datatypes.pickle} datatype.
+This module tests the L{t4.orm.util.datatypes.pickle} datatype.
 """
 
 import os, unittest
 
-from orm2.debug import sqllog
-# sqllog.verbose = True
+from t4.debug import sqllog
+sqllog.verbose = True
+
 sqllog.buffer_size = 10 # keep the last 10 sql commands sent to the backend
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.datasource import datasource
-from orm2.util.datatypes import pickle
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.datasource import datasource
 
 class person(dbobject):
     """
@@ -57,10 +57,10 @@ class person_insert_test(unittest.TestCase):
     """
     
     def setUp(self):
-        self.ds = datasource("adapter=gadfly")
+        self.ds = datasource(os.getenv("ORMTEST_PGSQL_CONN"))
 
         self.ds.execute("""CREATE TABLE person (
-                             id INTEGER,
+                             id SERIAL,
                              firstname VARCHAR,
                              lastname VARCHAR,
                              attributes VARCHAR ) """)

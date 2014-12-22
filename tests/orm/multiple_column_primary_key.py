@@ -26,18 +26,18 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 """
-This is an enhanced version of the person example that tests orm2's
+This is an enhanced version of the person example that tests t4.orm's
 ability to use multi column primary keys.
 """
 
 import os, unittest
 
-from orm2.debug import sqllog
+from t4.debug import sqllog
 sqllog.buffer_size = 10 # keep the last 10 sql commands sent to the backend
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.datasource import datasource
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.datasource import datasource
 
 class person(dbobject):
     """
@@ -85,10 +85,12 @@ class person_insert_test(unittest.TestCase):
 
         # let's try an update
         me.height = 187 # grew some more hair ;-)
-        self.ds.flush_updates()
 
-        self.assertEqual(sqllog.queries[-1],
-                         "UPDATE person SET height = 187 WHERE firstname = 'Diedrich' AND lastname = 'Vorberg'")
+        self.ds.commit()
+        
+        self.assertEqual(sqllog.queries[-3],
+                         "UPDATE person SET height = 187 WHERE "
+                         "firstname = 'Diedrich' AND lastname = 'Vorberg'")
         
 class person_insert_test_pgsql(person_insert_test):
 
@@ -100,25 +102,30 @@ class person_insert_test_pgsql(person_insert_test):
                              lastname TEXT,
                              height INTEGER,
                              PRIMARY KEY(firstname, lastname)
-                           ) """, modify=True)
+                           ) """)
+
+    def tearDown(self):
+        self.ds.execute("DROP TABLE IF EXISTS person CASCADE")
+        self.ds.commit()
+        self.ds.close()
         
 class person_insert_test_mysql(person_insert_test):
 
     def setUp(self):
         # ORMTEST_MYSQL_CONN="adapter=mysql host=localhost dbname=test"
         self.ds = datasource(os.getenv("ORMTEST_MYSQL_CONN"))
-        self.ds.execute("DROP TABLE IF EXISTS person", modify=True)
+        self.ds.execute("DROP TABLE IF EXISTS person")
         self.ds.execute("""CREATE TABLE person (
                              firstname VARCHAR(100), -- MySQL needs to know
                              lastname VARCHAR(100),  -- the key length
                              height INTEGER,
                              PRIMARY KEY(firstname, lastname)
-                           ) """, modify=True)
+                           ) """)
         
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(person_insert_test))
+    # suite.addTest(unittest.makeSuite(person_insert_test))
 
     if os.environ.has_key("ORMTEST_PGSQL_CONN"):
         suite.addTest(unittest.makeSuite(person_insert_test_pgsql))

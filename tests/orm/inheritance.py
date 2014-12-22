@@ -63,7 +63,7 @@ def IN(seq0, seq1):
 
 class inheritance(unittest.TestCase):
     def setUp(self):
-        ds = datasource("adapter=gadfly")
+        self.ds = datasource(os.getenv("ORMTEST_PGSQL_CONN"))
         
     def test_simple(self):
         self.assertEqual(property_names(vehicle(id=1, name="Vehicle 0")),
