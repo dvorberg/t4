@@ -72,7 +72,7 @@ class result:
 
         self.select = select
         
-        self.columns = dbclass.__select_columns__()
+        self.columns = dbclass.__select_expressions__()        
         self.cursor = ds.execute(select)
 
         if getattr(self.ds, "no_fetchone", False):
@@ -271,6 +271,7 @@ class dbobject(object):
             self.__changed_columns__.clear()
 
 
+    @classmethod
     def __from_result__(cls, ds, info):
         """
         This constructor is called by L{datasource.datasource_base}
@@ -281,15 +282,14 @@ class dbobject(object):
         """
         self = cls(__ds=ds)
         for property in cls.__dbproperties__():
-            if info.has_key(property.column):
-                property.__set_from_result__(ds, self, info[property.column])
+            expr = property.select_expression(cls, True)
+            if info.has_key(expr):
+                property.__set_from_result__(ds, self, info[expr])
 
         self._ds = ds
         self._is_stored = True
 
         return self
-
-    __from_result__ = classmethod(__from_result__)
 
     def __insert__(self, ds):
         """
@@ -324,6 +324,7 @@ class dbobject(object):
         """
         return self._is_stored
 
+    @classmethod
     def __dbproperties__(cls):
         """
         This is a generator over all the dbproperties in this dbobject.
@@ -333,9 +334,7 @@ class dbobject(object):
         ret.sort()
         return ret
                 
-    __dbproperties__ = classmethod(__dbproperties__)
-
-
+    @classmethod
     def __dbproperty__(cls, name=None):
         """
         Return a dbproperty by its name. Raise exceptions if
@@ -362,8 +361,7 @@ class dbobject(object):
 
         return property
 
-    __dbproperty__ = classmethod(__dbproperty__)
-
+    @classmethod
     def __has_dbproperty__(cls, name):
         """
         Return whether this dbclass has a property named `name`.
@@ -376,11 +374,8 @@ class dbobject(object):
         except AttributeError:
             return False
 
-
-    __has_dbproperty__ = classmethod(__has_dbproperty__)
-
-
-    def __select_columns__(cls, full_column_names=False):
+    @classmethod
+    def __select_expressions__(cls, full_column_names=False):
         """
         A list of columns to select from the relation to construct one
         of these. 
@@ -390,12 +385,11 @@ class dbobject(object):
             new = property.select_expression(cls, full_column_names)
             if new is not None and not new in columns:
                 columns.append(new)
-              
+                
         return columns
-    
-    __select_columns__ = classmethod(__select_columns__)
 
 
+    @classmethod
     def __dbattribute_names__(cls, include_relationships=True):
         """
         Return the list of our dbproperties’ attribute names.
@@ -408,8 +402,6 @@ class dbobject(object):
                            cls.__dbproperties__())
             
         return map(lambda dbprop: dbprop.attribute_name, props)
-        
-    __dbattribute_names__ = classmethod(__dbattribute_names__)
         
     def __repr__(self):
         """

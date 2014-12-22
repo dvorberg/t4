@@ -51,6 +51,8 @@ def random_password(length=8, use_specials=True):
     return ret
 
 def password_good_enough(password):
+    password = str(password)
+    
     if len(password) < 8:
         return False
         

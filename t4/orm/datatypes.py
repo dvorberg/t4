@@ -561,7 +561,6 @@ class wrapper(datatype):
     All classes derived from wrapper must overload the __copy__ method for
     dbclass inheritance to work properly.
     """
-
     def __init__(self, inside_datatype):
         self.inside_datatype = inside_datatype
 
@@ -735,7 +734,9 @@ class expression(wrapper):
             return wrapper.__get__(self, dbobj, owner)
 
     def __init_dbclass__(self, dbclass, attribute_name):
+        wrapper.__init_dbclass__(self, dbclass, attribute_name)
         self.inside_datatype.__init_dbclass__(dbclass, attribute_name)
+
         exp = self.expression._parts[:]
         exp.insert(0, "(")
         exp.append(") AS ")
@@ -765,12 +766,10 @@ class expression(wrapper):
             exp = n
 
         self._expression = sql.expression(*exp)
-        self.column = None
 
     def select_expression(self, dbclass, full_column_names):
         return self._expression
-        
-        
+
     def __copy__(self):
         return expression(self.inside_datatype, self.expression)
     

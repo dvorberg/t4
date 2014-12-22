@@ -356,9 +356,10 @@ class many2many(_2many):
             clauses = self.add_where(clauses)
 
             query = sql.select(
-                self.child_class().__select_columns__(full_column_names=True),
+                self.child_class().__select_expressions__(
+                    full_column_names=True),
                 relations, *clauses)
-
+            
             return self.ds().run_select(
                 self.child_class(), query)
                                                   
