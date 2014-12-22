@@ -179,8 +179,8 @@ class _2many(relationship):
                 
 
     def __init_dbclass__(self, dbclass, attribute_name):
-#         self.dbclass = dbclass
-#         self.attribute_name = attribute_name
+        self.dbclass = dbclass
+        self.attribute_name = attribute_name
 
 #         if self.foreign_key_column is None:
 #             self.foreign_key_column = "%s_%s" % (dbclass.__relation__,
@@ -305,7 +305,7 @@ class one2many(_2many):
                 self.ds().insert(a)
 
     def __init_dbclass__(self, dbclass, attribute_name):
-        pass
+        _2many.__init_dbclass__(self, dbclass, attribute_name)
 
     def __set__(self, dbobj, value):
         """
