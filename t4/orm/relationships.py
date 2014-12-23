@@ -779,7 +779,7 @@ class many2one(relationship):
 
     def select_expression(self, dbclass, full_column_names):
         if self.column is not None:
-            return datatype.select_expression(dbclass, full_column_names)
+            return datatype.select_expression(self, dbclass, full_column_names)
         else:
             return None
 
