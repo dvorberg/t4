@@ -593,7 +593,7 @@ class wrapper(datatype):
         """
         This will let the in in L{datatype.check_dbobj} yield True.
         """
-        return other.inside_datatype == self.inside_datatype
+        return other == self.inside_datatype
 
     def __copy__(self):
         raise NotImplementedError( "All classes derived from wrapper must "
@@ -775,8 +775,8 @@ class expression(wrapper):
         return expression(self.inside_datatype, self.expression)
     
     def __repr__(self):
-        return "<expression %s of type %s>" % ( self._expression,
-                                                repr(self.inside_datatype), )
+        return "<expression of type %s: %s>" % ( repr(self.inside_datatype),
+                                                 repr(self._expression), )
         
 class property_group(datatype):
     """
