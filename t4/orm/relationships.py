@@ -176,21 +176,6 @@ class _2many(relationship):
         self.dbclass = dbclass
         self.attribute_name = attribute_name
 
-#         if self.foreign_key_column is None:
-#             self.foreign_key_column = "%s_%s" % (dbclass.__relation__,
-#                                                  child_class.__primary_key__,)
-
-#         if self.own_key is None:
-#             self.own_key = dbclass.__dict__[dbclass.__primary_key__]
-        
-#         # We do not manage a column in the owner's table
-#         # nor a piece of data in the owner inself.
-#         # Deleting them will cause error messages on access attempts ;)
-#         if hasattr(self, "column"): del self.column        
-#         if hasattr(self, "_data_attribute_name"):
-#             del self._data_attribute_name        
-        pass
-
     def __get__(self, dbobj, owner):
         return self.result(dbobj, self)
 
@@ -536,7 +521,8 @@ class many2many(_2many):
         try:
             value = list(value) 
         except TypeError:
-            raise ValueError("You must assing a sequence of %s to this dbproperty!" % repr(self.child_class))
+            raise ValueError( ("You must assing a sequence of %s to this "
+                               "dbproperty!") % repr(self.child_class))
             
         # delete all links from the link_relation that point to the dbobj
         command = sql.delete(self.link_relation,
