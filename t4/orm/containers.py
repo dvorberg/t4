@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002-2014 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -26,9 +26,9 @@
 ##  I have added a copy of the GPL in the file gpl.txt.
 
 """
-These classes are very simmilar to primitives in that they manage two
+These classes are very simmilar to relationships in that they manage two
 relations. The child relation however is not represented by a dbclass,
-but only by a primitive type. 
+but only by a Python type. 
 """
 
 # Python
@@ -278,8 +278,8 @@ class sqldict(_container):
 
      class user(dbobject):
          id = integer()
-         info = sqldict('user_info', varchar(column=key),
-                        Unicode(column=value))
+         info = sqldict('user_info', varchar(column='key'),
+                        Unicode(column='value'))
 
      result = ds.select(user)
      me = result.next()
@@ -327,82 +327,110 @@ class sqldict(_container):
             return ret
 
 
-   def __set__(self, dbobj, new_dict):
-      self.check_dbobj(dbobj)
-        
-      if new_values is None:
-         raise ValueError("You cannot set a sqldict to None, sorry.")
+   def __set__(self, dbobj, new_dict):       
+       if new_dict is None:
+          raise ValueError("You cannot set a sqldict to None, sorry.")
 
-        # Convert each of the keys and values in the new dict to the
-        # appropriate types and run the validators on each of the values.
+       self.check_dbobj(dbobj)
 
-      new = {}
-      for key, value in new_dict.items():
-         key = self.child_key_column.__convert__(key)
-         value = self.child_value_column.__convert__(value)
-         
-         for validator in self.child_key_column.validators:
-            validator.check(dbobj, self, key)
-            
-         for validator in self.child_value_column.validators:
-            validator.check(dbobj, self, value)
-              
-         new[key] = value
+       if self.isset(dbobj):
+           # We have a new version of the dict in memory and can compare
+           # values against it.
+           old_dict = getattr(dbobj, self.data_attribute_name())
+           old_dict.update(new_dict)
 
-      # Delete the rows currently in the database
-      dbobj.__ds__().execute(sql.delete(self.child_relation,
-                                          self.child_where(dbobj)))
+           new_keys = set(new_dict.keys())
+           old_keys = set(old_dict.keys())
+           obsolete_keys = old_keys.difference(new_keys)
 
-      # And insert new ones
-      for key, value in new.items():
-         key_literal = self.child_key_column.sql_literal_class(key)
+           for key in obsolete_keys:
+               old_dict[key]
+       else:
+           if dbobj.__ds__():
+               raise ValueError("Can’t initialize a sqldict on "
+                                "dbobject creation, only after insert().")
            
-         if value is None:
-            value_literal = sql.NULL
-         else:
-            value_literal = self.child_value_column.sql_literal_class(value)
-            
-         query = sql.insert( self.child_relation,
-                             ( self.child_key,
-                               self.child_key_columnd.column,
-                               self.child_value_column.column, ),
-                             ( dbobj.__primary_key__.sql_literal(),
-                               key_literal, value_literal, ) )
-         dbobj.__ds__().execute(query)
-            
-         setattr(dbobj, self.data_attribute_name(),
-                 self.sqldict_dict(self, dbobj, new))
+           # Convert each of the keys and values in the new dict to the
+           # appropriate types and run the validators on each of the values.
+           new = {}
+           for key, value in new_dict.items():
+              key = self.child_key_column.__convert__(key)
+              value = self.child_value_column.__convert__(value)
+
+              for validator in self.child_key_column.validators:
+                 validator.check(dbobj, self, key)
+
+              for validator in self.child_value_column.validators:
+                 validator.check(dbobj, self, value)
+
+              new[key] = value
+
+           # Delete the rows currently in the database
+           dbobj.__ds__().execute(sql.delete(self.child_relation,
+                                             self.child_where(dbobj)))
+
+           # And insert new ones
+           for key, value in new.items():
+              key_literal = self.child_key_column.sql_literal_class(
+                  self.child_key_column.__convert__(key))
+
+              if value is None:
+                 value_literal = sql.NULL
+              else:
+                 value_literal = self.child_value_column.sql_literal_class(
+                     self.child_value_column.__convert__(value))
+
+              query = sql.insert( self.child_relation,
+                                  ( self.child_key,
+                                    self.child_key_column.column,
+                                    self.child_value_column.column, ),
+                                  ( dbobj.__primary_key__.sql_literal(),
+                                    key_literal, value_literal, ) )
+              dbobj.__ds__().execute(query)
+
+              setattr(dbobj, self.data_attribute_name(),
+                      self.sqldict_dict(self, dbobj, new))
             
 
    class sqldict_dict(dict):
       def __init__(self, sqldict, dbobj, data={}):
-         self.update(data)
+         dict.update(self, data)
          self._sqldict = sqldict
          self._dbobj = dbobj
          
       def __setitem__(self, key, value):
-         key_column = self._sqldict.child_key_column.column
-         key_literal = self._sqldict.child_key_column.sql_literal_class(key)
-         
+         key_column = self._sqldict.child_key_column.column         
+         for validator in self._sqldict.child_key_column.validators:
+             validator.check(self._dbobj, self._sqldict.child_key_column, key)
+         key_literal = self._sqldict.child_key_column.sql_literal_class(
+             self._sqldict.child_key_column.__convert__(key))
+
          value_column = self._sqldict.child_value_column.column
+         for validator in self._sqldict.child_value_column.validators:
+             validator.check(self._dbobj, self._sqldict.child_value_column,
+                             value)         
          value_literal = self._sqldict.child_value_column.sql_literal_class(
-            value)
+             self._sqldict.child_value_column.__convert__(value))         
 
          if self.has_key(key):
-            where = self._sqldict.child_where(self._dbobj) + sql.where(
-               key_column, " = ", key_literal)
-            
-            command = sql.update(self._sqldict.child_relation, where,
-                                 { str(value_column): value_literal })
+             if self[key] != value:
+                 where = sql.where.and_(self._sqldict.child_where(self._dbobj),
+                                        sql.where(key_column, "=", key_literal))
+             
+                 command = sql.update(self._sqldict.child_relation, where,
+                                      { str(value_column): value_literal })
+             else:
+                 command = None
          else:
-            command = sql.insert( self._sqldict.child_relation,
-                                  ( self._sqldict.child_key,
-                                    key_column,
-                                    value_column, ),
-                                  ( self._dbobj.__primary_key__.sql_literal(),
-                                    key_literal, value_literal, ) )
-            
-         self._dbobj.__ds__().execute(command)
+             command = sql.insert( self._sqldict.child_relation,
+                                   ( self._sqldict.child_key,
+                                     key_column,
+                                     value_column, ),
+                                   ( self._dbobj.__primary_key__.sql_literal(),
+                                     key_literal, value_literal, ) )
+
+         if command is not None:
+             self._dbobj.__ds__().execute(command)
             
          dict.__setitem__(self, key, value)
 
@@ -418,7 +446,9 @@ class sqldict(_container):
          dict.__delitem__(self, key)
 
 
-
+      def update(self, other):
+          for key, value in other.items():
+              self[key] = value
 
 
 
