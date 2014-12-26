@@ -396,9 +396,11 @@ class datasource_base:
 
         where = []
         for property, value in zip(primary_key.attributes(), key):
+            literal = property.sql_literal_class(property.__convert__(value))
+            
             where.append(property.column)
             where.append("=")
-            where.append(property.sql_literal_class(value))
+            where.append(literal)
             where.append("AND")
 
         del where[-1] # remove last "AND"
