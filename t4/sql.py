@@ -55,6 +55,7 @@ The way it works is best described by example::
 """
 __author__ = "Diedrich Vorberg <diedrich@tux4web.de>"
 
+import json
 from string import *
 from types import *
 
@@ -399,7 +400,12 @@ class direct_literal(literal):
         runner.params.append(self._content)
         return "%s"
     
-            
+
+class json_literal(string_literal):
+    def __init__(self, v):
+        self._content = json.dumps(v)
+
+    
 class relation(_part): 
     def __init__(self, name, schema=None, quote=False):
         if not isinstance(name, identifyer):
@@ -433,6 +439,14 @@ class relation(_part):
     def schema(self):
         return self._schema
 
+class subquery_as_relation(relation):
+    def __init__(self, select, alias):
+        self._select = select
+        self._alias = alias
+
+    def __sql__(self, runner):
+        return "(%s) AS %s" % ( runner(self._select),
+                                runner(self._alias), )
         
 class column(_part):
     """
