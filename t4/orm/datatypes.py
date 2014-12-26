@@ -38,7 +38,7 @@ Datatype classes for the default SQL datatypes.
   
 """
 # Python
-import sys, copy, cPickle
+import sys, copy, cPickle, json as py_json
 from types import *
 from string import *
 from datetime import time as py_time
@@ -384,6 +384,25 @@ class Unicode(string):
         else:
             return value
 
+class converting_unicode(Unicode):
+    """
+    Rather than complaining about non-unicode input, this datatype
+    will try to convert input values to unicode using the specified
+    `encoding`.
+    """
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False, null_on_empty=False,
+                 encoding="utf-8"):
+        Unicode.__init__(self, column, title,
+                         validators, has_default, null_on_empty)
+        self._encoding = encoding
+
+    def __convert__(self, value):
+        if type(value) != UnicodeType:
+            return unicode(str(value), self._encoding)
+        else:
+            return value
+        
 
 class datetime_base(datatype):
     """
@@ -731,7 +750,7 @@ class expression(wrapper):
         if self.has_default and not self.isset(dbobj):
             return self.default
         else:
-            return wrapper.__get__(self, dbobj, owner)
+            return self.inside_datatype.__get__(dbobj, owner)
 
     def __init_dbclass__(self, dbclass, attribute_name):
         wrapper.__init_dbclass__(self, dbclass, attribute_name)
@@ -1165,7 +1184,28 @@ class enum(string):
         value = str(value)
         
         if not value in self._values:
-            raise ValueError(value)
+            raise ValueError("Not in enum: %s" % repr(value))
         else:
             datatype.__set__(self, dbobj, value)
+
+class json(datatype):
+    """
+    This datatype will use json.dumps and json.loads to convert input
+    values to JSON on their way to and from the database.
+    """
+    sql_literal_class = sql.json_literal
     
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        if value is None: value = "{}"
+        value = py_json.loads(value)
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
