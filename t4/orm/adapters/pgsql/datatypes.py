@@ -211,7 +211,7 @@ class uuid(datatype):
             if not isinstance(value, UUID):
                 return UUID(value)
             else:
-                return valuet4pg_catalog_model
+                return value
 
 class tsvector_data:
     def __hash__(self):
