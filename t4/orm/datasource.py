@@ -218,7 +218,7 @@ class datasource_base:
 
         if modify:
             cursor = self.__modify_cursor__()
-            self.__flush_updates__()
+            self.flush_updates()
         else:
             cursor = self.cursor()
 
@@ -231,11 +231,12 @@ class datasource_base:
             
         return self._modify_cursor
 
-    def __flush_updates__(self):
+    def flush_updates(self, select_after_update=False):
         cursor = self.__modify_cursor__()
         for dbobj in self._changed_dbobjs:
-            dbobj.__perform_updates__(cursor)
+            dbobj.__perform_updates__(cursor, select_after_update)
         self._changed_dbobjs = set()
+    __flush_updates__ = flush_updates
         
     def commit(self, *dbobjs, **kw):
         """
@@ -251,7 +252,7 @@ class datasource_base:
         #self._dbconn().commit()
         #self._modify_cursor = None
         #return cursor
-        self.__flush_updates__()
+        self.flush_updates()
         self._dbconn().commit()
     
     def perform_updates(self, *dbobjs, **kw):
