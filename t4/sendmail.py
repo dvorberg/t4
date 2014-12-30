@@ -71,7 +71,7 @@ class sendmail_attachment:
         msg.add_header("Content-Disposition", "attachment", filename=filename)
 
     
-def sendmail(self, from_name, from_email,
+def sendmail(from_name, from_email,
              to_name, to_email,
              subject, message, attachments=[], headers={}, bcc=[],
              text_subtype="plain", encoding="utf-8"):
@@ -104,7 +104,6 @@ def sendmail(self, from_name, from_email,
                                  from_email,) )
     
 
-    outer["X-t4cms"] = self.portal_url.getPortalObject().getId()
     
     for name, value in headers.items():
         outer[name] = value
