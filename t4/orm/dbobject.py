@@ -41,6 +41,7 @@ import keys
 from datasource import datasource_base
 from exceptions import *
 from datatypes import datatype
+from relationships import relationship
 
 class result:
     """
@@ -251,22 +252,49 @@ class dbobject(object):
     def __register_change__(self, dbproperty):
         if self.__is_stored__():
             self._ds.__register_change_of__(self)
-            self.__changed_columns__[dbproperty.column] = dbproperty
+            if self.__changed_columns__.has_key(dbproperty.column):
+                self.__changed_columns__[dbproperty.column].add(dbproperty)
+            else:
+                self.__changed_columns__[dbproperty.column] = set((dbproperty,))
             
-    def __perform_updates__(self, update_cursor):
+    def __perform_updates__(self, update_cursor, select_after_update=False):
         if len(self.__changed_columns__) == 0:
             return
         else:
             info = {}
-            for column, datatype in self.__changed_columns__.items():
-                info[column] = datatype.update_expression(self)
+            for column, datatypes in self.__changed_columns__.items():
+                for dt in datatypes:
+                    if not info.has_key(column):
+                        update_expression = dt.update_expression(self)
+                        if update_expression is not None:
+                            info[column] = update_expression
 
             statement = sql.update(self.__relation__,
                                    self.__primary_key__.where(),
                                    info)
-                
+
             update_cursor.execute(statement)
 
+            if select_after_update:
+                need_select = []
+                for column, dbprops in self.__changed_columns__.items():
+                    dbprops = filter(lambda d: d.__select_after_insert__(self),
+                                     dbprops)
+                    if len(dbprops) > 0:
+                        need_select.append( (column, dbprops,) )
+                
+                if len(need_select) > 0:
+                    columns = map(lambda (c, d): c, need_select)
+                    query = sql.select(columns, self.__relation__,
+                                       self.__primary_key__.where())
+                    update_cursor.execute(query)
+                    tpl = update_cursor.fetchone()
+
+                    for (column, dbprops), value in zip(need_select, tpl):
+                        for dbprop in dbprops:
+                            dbprop.__set_from_result__(self.__ds__(),
+                                                       self, value)
+                                
             # Clear the list of changed columns
             self.__changed_columns__.clear()
 
@@ -281,6 +309,7 @@ class dbobject(object):
         @param info: dictionary as { 'column_name': <data> }        
         """
         self = cls(__ds=ds)
+
         for property in cls.__dbproperties__():
             expr = property.select_expression(cls, True)
             if info.has_key(expr):
@@ -300,7 +329,7 @@ class dbobject(object):
         """
         self._ds = ds
         self._is_stored = True
-        self.__changed_columns__ = {}
+        self.__changed_columns__.clear()
     
     def __ds__(self):
         """
@@ -325,12 +354,16 @@ class dbobject(object):
         return self._is_stored
 
     @classmethod
-    def __dbproperties__(cls):
+    def __dbproperties__(cls, include_relationships=True):
         """
         This is a generator over all the dbproperties in this dbobject.
         """
         ret = filter(lambda prop: isinstance(prop, datatype),
                      cls.__dict__.values())
+
+        if not include_relationships:
+            ret = filter(lambda prop: not isinstance(prop, relationship), ret)
+
         ret.sort()
         return ret
                 
@@ -493,13 +526,13 @@ class dbobject(object):
                 if not ignore_extra_keys:
                     raise NoSuchAttributeOrColumn(name)
 
-    def __as_dict__(self):
+    def __as_dict__(self, include_relationships=False):
         """
         Return a representation of this dbobject as dictionary. 
         """
         return dict(map(lambda dbprop: ( dbprop.attribute_name,
                                          dbprop.__get__(self), ),
-                        self.__dbproperties__()))
+                        self.__dbproperties__(include_relationships)))
 
     
                 
