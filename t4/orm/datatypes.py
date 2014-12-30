@@ -136,7 +136,23 @@ class datatype(property):
         except AttributeError:
             from exceptions import DatatypeMustBeUsedInClassDefinition
             raise DatatypeMustBeUsedInClassDefinition(self.__class__.__name__)
+
+    def expression_attribute_name(self):
+        return " expression" + self.data_attribute_name()
         
+    def is_set_to_an_expression(self, dbobj):
+        return hasattr(dbobj, self.expression_attribute_name())
+
+    def set_to_an_expression(self, dbobj, expression):
+        setattr(dbobj, self.expression_attribute_name(), expression)
+
+    def expression(self, dbobj):
+        return getattr(dbobj, self.expression_attribute_name(), None)
+
+    def remove_expression(self, dbobj):
+        if self.is_set_to_an_expression(dbobj):
+            delattr(dbobj, self.expression_attribute_name())
+    
     def __get__(self, dbobj, owner="owner? Like owner of what??"):
         """
         See the Python Language Reference, chapter 3.3.2.2 for details on
@@ -183,13 +199,15 @@ class datatype(property):
         self.check_dbobj(dbobj)
 
         if isinstance(value, sql.expression):
-            setattr(dbobj, " expression" + self.data_attribute_name(), value)
+            self.set_to_an_expression(dbobj, value)
             if self.isset(dbobj):
                 # Remove the current value from the dbobj so we don't
                 # return a value that's not in sync with the database.
                 delattr(dbobj, self.data_attribute_name())                
             dbobj.__register_change__(self)
         else:
+            self.remove_expression(dbobj)
+                
             if value is not None: value = self.__convert__(value)
 
             for validator in self.validators:
@@ -202,6 +220,7 @@ class datatype(property):
                 dbobj.__register_change__(self)
 
     def __set_from_result__(self, ds, dbobj, value):
+        self.remove_expression(dbobj)            
         setattr(dbobj, self.data_attribute_name(),
                 self.__convert__(value))
 
@@ -218,14 +237,14 @@ class datatype(property):
         @returns: True, if this property is set, otherwise... well.. False.
         """
         return hasattr(dbobj, self.data_attribute_name())
-
+    
     def update_expression(self, dbobj):
         """
         The expression this function returns is used in INSERT and UPDATE
         statements to represet this column’s value. May return None. 
         """
-        if hasattr(dbobj, " expression" + self.data_attribute_name()):
-            return getattr(dbobj, " expression" + self.data_attribute_name())
+        if self.is_set_to_an_expression(dbobj):
+            return self.expression(dbobj)
         else:
             return self.sql_literal(dbobj)
 
@@ -277,7 +296,8 @@ class datatype(property):
         been inserted to pick up information supplied by backend as by SQL
         default values and auto increment columns.
         """
-        return (self.has_default and not self.isset(dbobj))
+        return ( not self.isset(dbobj) and \
+                     (self.has_default or self.is_set_to_an_expression(dbobj)))
 
     def __delete__(self, dbobj):
         raise NotImplementedError(
