@@ -25,7 +25,7 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os, os.path as op
+import sys, os, os.path as op, types, subprocess, threading
 from random import random
 from string import *
 from types import *
@@ -288,4 +288,52 @@ def here_and_next(seq, end_marker=None):
         else:
             yield here, next        
             here = next
+
+def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
+    """
+    Executes cmd using a subprocess (including shell). If `input` is
+    provided, it will be piped into the subprocess, if creates_output
+    is set, its standard output will be captured and returned.
+
+    @returns: A pair as: The return value from subprocess.communicate() ( 
+       a tuple) of various contents and and the (integer) exit code of the
+       subprocess. Usage: ((stdin, stdout), retval) = run_with_timeout(…)
+
+    @raises: IOError if the timeout is exceed.
+    """
+    if type(cmd) == types.ListType:
+        cmd = join(cmd, " ")
+
+    d = {}
+    if input is not None:
+        stdin = subprocess.PIPE
+    else:
+        stdin = None
+
+    if creates_output:
+        stdout = subprocess.PIPE
+    else:
+        stdout = None
+        
+    pipe = subprocess.Popen( cmd, shell=True,
+                             stdin = stdin,
+                             stdout = stdout,
+                             stderr = subprocess.PIPE )
+
+    def target():                        
+        d["output"] = ( pipe.communicate(input), pipe.returncode, )
+
+    thread = threading.Thread(target=target)
+    thread.pipe = pipe
+
+    thread.start()
+
+    thread.join(timeout)
+
+    if thread.is_alive():
+        thread.pipe.terminate()
+        thread.join()
+        raise IOError("Subprocess timeout.")
+
+    return d["output"]
 
