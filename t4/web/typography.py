@@ -215,3 +215,12 @@ def pretty_german_float(f, decimals=2):
         return "-" + s
     else:
         return s
+
+def pretty_german_integer(i):    
+    s = str(i)
+    ret = ""
+    while len(s) > 3:
+        ret = "." + s[-3:] + ret
+        s = s[:-3]
+
+    return s + ret
