@@ -176,7 +176,7 @@ class _2many(relationship):
         self.dbclass = dbclass
         self.attribute_name = attribute_name
 
-    def __get__(self, dbobj, owner):
+    def __get__(self, dbobj, owner=None):
         return self.result(dbobj, self)
 
     def __set__(self, dbobj, value):
@@ -646,7 +646,7 @@ class many2one(relationship):
             
 
 
-    def __get__(self, dbobj, owner):
+    def __get__(self, dbobj, owner=None):
         if self.cache and \
                hasattr(dbobj, self.data_attribute_name() + "_cache"):
             return getattr(dbobj, self.data_attribute_name() + "_cache")
