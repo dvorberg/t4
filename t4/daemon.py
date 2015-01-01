@@ -194,7 +194,7 @@ class daemon:
         self._debug=True and call run() in the foreground.
         """
         def usage():
-            print >> sys.stderr, "Usage: %s start|stop|restart|debug"%sys.argv
+            print >> sys.stderr, self.usage()
             sys.exit(255)
 
         if cmd is None:
@@ -206,6 +206,10 @@ class daemon:
         elif cmd == "restart": self.stop(); self.start()
         elif cmd == "debug": self.debug()
         else: usage()
+
+    def usage(self):
+        return "Usage: %s [optinos] start|stop|restart|debug" % (
+            os.path.basename(sys.argv[0]),)
 
     def startup(self):
         """
