@@ -46,6 +46,14 @@ if dbapi is None:
     except ImportError:
         dbapi = None
 
+try:
+    import psycopg2
+    number, rest = psycopg2.__version__.split(" ", 1)
+    psycopg2_version = tuple(map(int, number.split(".")))
+except ImportError:
+    psycopg2_version = None
+        
+
 if dbapi is None:
     try:
         import psycopg 
