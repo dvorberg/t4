@@ -128,7 +128,13 @@ class t4daemon(daemon):
         Options and arguments will be available as self.options and
         self.args respectively.
         """
-        return optparse.OptionParser()
+        return optparse.OptionParser(usage=daemon.usage(self))
+
+    def usage(self):
+        """
+        Return the usage information for this program.
+        """
+        return self.option_parser().format_help()
 
     def validate_params(self, option_parser, options, args):
         """
