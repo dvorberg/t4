@@ -32,14 +32,15 @@ This module implements datatype classes that are specific to PostgreSQL.
 """
 
 # Python
-import sys, string, types
+import sys, string, types, json as py_json
 from uuid import UUID
-
 
 # orm
 from t4 import sql
 from t4.orm.datatypes import *
 from t4.validators import ip_address_validator
+
+from datasource import psycopg2_version
 
 # Some regular expressions that may come in handy
 point_re = re.compile(r"\(?\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)?")
@@ -276,3 +277,70 @@ class tsvector(datatype):
 
     def __select_after_insert__(self, dbobj):
         return False
+
+class json(datatype):
+    """
+    Represent a regular JSON column (rather than JSONB column, see
+    below); psocopg2 converts the retrieved JSON object to Python for
+    us.
+    """
+    sql_literal_class = sql.json_literal
+    
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False,
+                 empty_object_on_null=False):
+        """
+        If empty_object_on_null is set for a json column, a NULL values
+        for this column will be represented in Python as an empty dict.
+        """
+        datatype.__init__(self, column, title, validators, has_default)
+        self.empty_object_on_null=empty_object_on_null
+
+        if psycopg2_version < (2,5):
+            raise NotImplementedError("The JSON datatype required "
+                                      "psycopg2 >= 2.5")
+        
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        if value is None and self.empty_object_on_null: value = "{}"
+        if type(value) == types.StringType:
+            raise ValueError("STRING " + self.attribute_name)
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    
+class jsonb(json):
+    """
+    This datatype will use json.dumps and json.loads to convert input
+    values to JSON on their way to and from the database. For the
+    regular JSON type, psycopg2 does this for us.
+    """
+    sql_literal_class = sql.json_literal
+    
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        if value is None and self.empty_object_on_null: value = "{}"
+        
+        #value = py_json.loads(value)
+
+        if type(value) == types.StringType:
+            raise ValueError("STRING " + self.attribute_name)
+        
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    
