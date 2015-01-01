@@ -26,8 +26,10 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 
-import sys, os, os.path as op
+import sys, os, os.path as op, types, smtplib
 from string import *
+
+from ll.xist import xsc
 
 from email import encoders
 from email.message import Message
