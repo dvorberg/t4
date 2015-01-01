@@ -38,7 +38,7 @@ Datatype classes for the default SQL datatypes.
   
 """
 # Python
-import sys, copy, cPickle, json as py_json
+import sys, copy, cPickle
 from types import *
 from string import *
 from datetime import time as py_time
@@ -1207,25 +1207,4 @@ class enum(string):
             raise ValueError("Not in enum: %s" % repr(value))
         else:
             datatype.__set__(self, dbobj, value)
-
-class json(datatype):
-    """
-    This datatype will use json.dumps and json.loads to convert input
-    values to JSON on their way to and from the database.
-    """
-    sql_literal_class = sql.json_literal
-    
-    def __set_from_result__(self, ds, dbobj, value):
-        """
-        This method evaulates the value into a Python datastructure.
-        """
-        if value is None: value = "{}"
-        value = py_json.loads(value)
-        setattr(dbobj, self.data_attribute_name(), value)
-
-    def __convert__(self, value):
-        """
-        Since we store the Python object 'as is', convert does nothing.
-        """
-        return value
 
