@@ -94,7 +94,8 @@ class afm_metrics(metrics):
 
             bb = bounding_box.from_tuple(info["B"])
             self[unicode_char_code] = glyph_metric(char_code, 
-                                                   info["W0X"], glyph_name,
+                                                   info["W0X"],
+                                                   glyph_name,
                                                    bb)
 
         # Create kerning pair index
