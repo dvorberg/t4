@@ -30,7 +30,7 @@ This module defines a base class for documents and a number of utility
 classes.
 """
 
-import sys, os, warnings
+import sys, os, warnings, unicodedata
 from string import *
 from types import *
 
@@ -39,6 +39,9 @@ from t4.psg.util import *
 from t4.psg.fonts.encoding_tables import unicode_to_glyph_name
 from t4.web.title_to_id import asciify
 from t4.debug import log
+
+# A number of common Unicode characters not found in some fonts, that
+# have rather obvious substitutions.
 
 class resource:
     """
@@ -200,7 +203,7 @@ class font_wrapper:
         for a in range(32,127):
             self.mapping[a] = a
         self.next = 127
-
+        
     def register_chars(self, us, ignore_missing=True):
         if type(us) not in (UnicodeType, ListType,):
             raise TypeError("Please use unicode strings!")
@@ -209,24 +212,16 @@ class font_wrapper:
                 chars = map(ord, us)
             else:
                 chars = us
-                
+
             for char in chars:
                 if not self.font.has_char(char):
-                    # Try to reduce the char to its base-form, that is
-                    # remove all dots and stuff.
-                    #u = unichr(char)
-                    #a = asciify(u)
-
-                    #if a != u:
-                    #    return self.register_chars(a)
-                        
                     if ignore_missing:
                         if unicode_to_glyph_name.has_key(char):
                             tpl = ( self.font.ps_name,
                                     unicode_to_glyph_name[char], )
                         else:
                             tpl = ( self.font.ps_name, "#%i" % char, )
-                            
+
                         msg = "%s does not contain needed glyph %s" % tpl
                         if log.verbose:
                             warnings.warn(msg)
@@ -254,7 +249,7 @@ class font_wrapper:
                             next = self.next
                     else:
                         next = self.next
-                                
+
                     self.mapping[char] = next
 
     def postscript_representation(self, us):
@@ -267,16 +262,17 @@ class font_wrapper:
         if type(us) not in (UnicodeType, ListType):
             raise TypeError("Please use unicode strings!")
         else:
-            self.register_chars(us)
-            ret = []
-
             if type(us) == ListType:
                 chars = us
             else:
                 chars = map(ord, us)
                 
+            self.register_chars(us)
+            ret = []
+
             for char in chars:
                 byte = self.mapping.get(char, None)
+
                 if byte is None:
                     byte = " "
                 else:
@@ -295,7 +291,7 @@ class font_wrapper:
         section.
         """
         # turn the mapping around
-        mapping = dict(map(lambda tpl: ( tpl[1], tpl[0], ),
+        mapping = dict(map(lambda (char, glyph): (glyph, char),
                            self.mapping.iteritems()))
 
         nodefs = 0
@@ -303,7 +299,8 @@ class font_wrapper:
         
         for a in range(256):
             if mapping.has_key(a):
-                if unicode_to_glyph_name.has_key(mapping[a]):
+                uniord = mapping[a]
+                if self.font.metrics.has_key(uniord):
                     if nodefs == 1:
                         encoding_vector.append("/.nodef")
                         nodefs = 0
@@ -311,19 +308,23 @@ class font_wrapper:
                         encoding_vector.append("%i{/.nodef}repeat" % nodefs)
                         nodefs = 0
 
-                    ps = "/%s" % unicode_to_glyph_name[mapping[a]]
+                    glyph_metric = self.font.metrics[uniord]
+                    ps = "/%s" % glyph_metric.ps_name
                 else:
                     ps = "/uni%0000X" % mapping[a]
                     
-                encoding_vector.append(ps)
+                encoding_vector.append("%s %% key=%i %s" % (
+                        ps, a, lower(unicodedata.name(unichr(uniord))),))
             else:
                 nodefs += 1
 
         if nodefs != 0:
             encoding_vector.append("%i{/.nodef}repeat" % nodefs)
 
-        tpl = ( self.ps_name(), join80(encoding_vector), self.font.ps_name, )
-        return "/%s [%s]\n /%s findfont " % tpl + \
+        tpl = ( self.ps_name(),
+                join(encoding_vector, "\n  "),
+                self.font.ps_name, )
+        return "/%s [\n  %s\n]\n /%s findfont " % tpl + \
                "psg_reencode 2 copy definefont pop def\n" 
         
     __str__ = setup_lines
