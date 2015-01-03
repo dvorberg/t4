@@ -337,3 +337,27 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     return d["output"]
 
+def thumb_size(original_size, maxsize):
+    """
+    Return a tuple as (width, height) for this image when it is scaled
+    down to MAXSIZE from PIL's image.py
+    """
+    ow, oh = original_size
+    mw, mh = maxsize
+
+    if ow < mw and oh < mh:
+        # The original image is smaller than maxsize, we have so scale up!
+        w = mw
+        h = oh * ( mw / ow )
+        if h > mh:
+            h = mh
+            w = ow * ( mh / oh)
+    else:    
+        w = mw
+        h = oh * (mw / ow)
+        
+        if h > mh:            
+            w = ow * (mh / oh)
+            h = mh
+            
+    return (w, h)
