@@ -46,6 +46,12 @@ class glyph_metric:
         self.ps_name = ps_name
         self.bounding_box = bounding_box
 
+    def __repr__(self):
+        return "<%s code=%i width=%f ps_name=%s>" % (
+            self.__class__.__name__, self.font_character_code,
+            self.width, self.ps_name, )
+    
+
 class metrics(dict):
     """
     Base class for font metric calculaions. Metrics objects are dict
