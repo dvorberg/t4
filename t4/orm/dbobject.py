@@ -73,7 +73,7 @@ class result:
 
         self.select = select
         
-        self.columns = dbclass.__select_expressions__()        
+        self.columns = dbclass.__select_expressions__(True)
         self.cursor = ds.execute(select)
 
         if getattr(self.ds, "no_fetchone", False):
