@@ -297,8 +297,10 @@ class json(datatype):
         self.empty_object_on_null=empty_object_on_null
 
         if psycopg2_version < (2,5):
-            raise NotImplementedError("The JSON datatype required "
-                                      "psycopg2 >= 2.5")
+            import psycopg2
+            raise NotImplementedError(("The JSON datatype required "
+                                       "psycopg2 >= 2.5, found %s"
+                                       ) % repr(psycopg2))
         
     def __set_from_result__(self, ds, dbobj, value):
         """
