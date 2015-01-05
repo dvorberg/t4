@@ -32,8 +32,6 @@ modules; except for the misc module from which every identifyer is
 imported here.
 """
 
-import re
-
 # misc
 from misc import *
 
@@ -43,6 +41,8 @@ from subfile import subfile
 # file_like_buffer
 from file_like_buffer import file_like_buffer, file_as_buffer
 
+from eps import *
+
 # meassure
 from measure import *
 
@@ -50,22 +50,3 @@ from measure import *
 from colors import *
 import colors
 
-bbre = re.compile(r"%%HiResBoundingBox: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?) "
-                  r"(\d+(?:\.\d+)?) (\d+(?:\.\d+)?)")
-def get_eps_size(fp_or_eps):
-    """
-    Provided EPS Source code, this function will return a pair of
-    floats in PostScript units. If a %%HiResBoundingBox can’t be
-    found, raise ValueError.
-    """
-    if isinstance(fp_or_eps, file):
-        eps = fp_or_eps.read(1024)
-    else:
-        eps = fp_or_eps[:1024]
-    match = bbre.search(eps)
-    if match is not None:
-        left, bottom, right, top = map(float, match.groups())
-        return right-left, top-bottom,
-    else:
-        raise ValueError("Can’t find bounding box in EPS.")
-        
