@@ -70,7 +70,10 @@ class sendmail_attachment:
             encoders.encode_base64(msg)
             
         # Set the filename parameter
-        msg.add_header("Content-Disposition", "attachment", filename=filename)
+        msg.add_header("Content-Disposition", "attachment",
+                       filename=self.filename)
+
+        return msg
 
     
 def sendmail(from_name, from_email,

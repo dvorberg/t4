@@ -698,43 +698,16 @@ class eps_image(_eps_image):
         
         if isinstance(parent, document.document):
             document_level = True
-        
-        # Skip forward in the input file seeking for the %PS.
-        # This is in case the file starts with garbage.
-        lines = line_iterator(fp)
-        line = ""
-        for line in lines:
-            if "%!PS" in line:
-                break
+
+        fp = eps_file_without_preview(fp)
+        bb = get_eps_bb(fp)
+        fp.seek(0)
+
+        if not isinstance(fp, subfile._subfile):
+            fp = file_as_buffer(fp)
             
-        lines.rewind()
-
-        begin = lines.fp.tell()
-        bb = None
-        hrbb = None
-        for line in lines:
-            if line.startswith("%%BoundingBox:"):
-                bb = line
-            elif line.startswith("%%HiResBoundingBox:"):
-                hrbb = line
-            elif line.startswith("%%EndComments"):
-                break
-
-        if hrbb is not None: bb = hrbb
-
-        if bb is None:
-            raise Excetion("Not a valid EPS file (no bounding box!)")
-        
-        parts = split(bb, ":")
-        numbers = parts[1]
-        bb = bounding_box.from_string(numbers)
-
-        fp.seek(0, 2)
-        length = fp.tell()
-        
-        fp = subfile(fp, begin, length-begin)
-        
-        _eps_image.__init__(self, parent, fp, bb, document_level,
+        _eps_image.__init__(self, parent, fp,
+                            bb, document_level,
                             border, clip)
 
 

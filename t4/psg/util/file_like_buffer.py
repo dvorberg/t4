@@ -136,5 +136,11 @@ class file_as_buffer:
         self.fp = fp
 
     def write_to(self, fp):
-        from t4.psg.util.misc import copy_linewise
-        copy_linewise(self.fp, fp)
+        #from t4.psg.util.misc import copy_linewise
+        #copy_linewise(self.fp, fp)
+        while True:
+            s = self.fp.read(1024)
+            if s == "":
+                break
+            else:
+                fp.write(s)
