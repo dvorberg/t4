@@ -235,17 +235,20 @@ class to_tsvector_expression(sql.expression):
         for key in texts.keys():
             if strip(texts[key]) == "":
                 del texts[key]
-        
-        for weight, text in texts.items():
-            if type(text) != types.UnicodeType: text = unicode(text)
-            self._append( ("setweight(",
-                           "  to_tsvector(",
-                           sql.string_literal(configuration_name), ", ",
-                           sql.unicode_literal(text),
-                           "), ", sql.string_literal(upper(weight)), ")",
-                           "||",) )
-        if len(self._parts) > 0:
-            self._parts.pop() # Remove last ||
+
+        if len(texts) == 0:
+            self._parts = ["NULL",]
+        else:
+            for weight, text in texts.items():
+                if type(text) != types.UnicodeType: text = unicode(text)
+                self._append( ("setweight(",
+                               "  to_tsvector(",
+                               sql.string_literal(configuration_name), ", ",
+                               sql.unicode_literal(text),
+                               "), ", sql.string_literal(upper(weight)), ")",
+                               "||",) )
+            if len(self._parts) > 0:
+                self._parts.pop() # Remove last ||
             
 
 class tsvector(datatype):
@@ -266,11 +269,8 @@ class tsvector(datatype):
                          
     def sql_literal(self, dbobj):
         data = getattr(dbobj, self.data_attribute_name(), None)
-        if data and data.texts:
-            return to_tsvector_expression(data.configuration_name,
-                                          data.texts)
-        else:
-            return "NULL"
+        return to_tsvector_expression(data.configuration_name,
+                                      data.texts)
 
     def select_expression(self, dbclass, full_column_names):
         return None
@@ -297,8 +297,10 @@ class json(datatype):
         self.empty_object_on_null=empty_object_on_null
 
         if psycopg2_version < (2,5):
-            raise NotImplementedError("The JSON datatype required "
-                                      "psycopg2 >= 2.5")
+            import psycopg2
+            raise NotImplementedError(("The JSON datatype required "
+                                       "psycopg2 >= 2.5, found %s"
+                                       ) % repr(psycopg2))
         
     def __set_from_result__(self, ds, dbobj, value):
         """
