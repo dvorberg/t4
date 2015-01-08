@@ -194,7 +194,8 @@ class richtext(_container_node):
         _node.__init__(self, *children, **kw)
     
     def _check_child(self, child):
-        assert isinstance(child, box), TypeError
+        assert isinstance(child, box), TypeError(
+            "You can only add boxes to a richtext object.")
 
     @property
     def style(self):
@@ -440,7 +441,7 @@ class paragraph(_node):
                    "right": right_xs,
                    "center": center_xs,
                    "justified": justify_xs, }[self.paragraph.style.text_align] 
-            
+
             for x, word in zip(xs(), self):
                 if x > 0 : print >> canvas, x, 0, "moveto"
                 word.render(canvas)
