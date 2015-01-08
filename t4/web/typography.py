@@ -224,3 +224,21 @@ def pretty_german_integer(i):
         s = s[:-3]
 
     return s + ret
+
+def pretty_german_date(self, pit, with_time=False, with_timezone=False):
+    """
+    Return a pretty representation of this date.
+    """
+    if pit is None:
+        return ""
+
+    if with_time:
+        r = "%s.%s.%s %02i:%02i Uhr" % ( pit.day(), pit.month(), pit.year(),
+                                         pit.hour(), pit.minute(), )
+    else:
+        r = "%s.%s.%s" % ( pit.day(), pit.month(), pit.year(), )
+
+    if with_timezone:
+        r += " (%s)" % pit.timezone()
+
+    return r
