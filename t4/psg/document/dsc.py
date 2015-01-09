@@ -1090,7 +1090,7 @@ class pdfpage_setup_buffer(file_like_buffer):
 
         if type(box) == FloatType:
             return ( box, box,
-                     self._page.w() + 2*box, self._page.h() + 2*box, )
+                     self._page.w() + box, self._page.h() + box, )
         else:
             return box
 
