@@ -110,7 +110,12 @@ def improve_typography_unicode(content, lang):
     return content
 
 def pretty_money(m, form=False):
-    if type(m) in (StringType, UnicodeType,): return m
+    if type(m) in (StringType, UnicodeType,):
+        try:
+            m = german_float(m)
+        except ValueError:
+            return m
+    
     if m is None:
         return ""
     else:
