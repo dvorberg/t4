@@ -42,8 +42,8 @@ Note that “word” and “syllable” are technical not linguistic units here.
 Refer to the class descriptions below for details.
 """
 
+import types, itertools, collections, unicodedata
 from string import *
-import types, unicodedata, itertools, collections
 from t4.utils import here_and_next
 import t4.psg.drawing.box
 
@@ -194,7 +194,8 @@ class richtext(_container_node):
         _node.__init__(self, *children, **kw)
     
     def _check_child(self, child):
-        assert isinstance(child, box), TypeError
+        assert isinstance(child, box), TypeError(
+            "You can only add boxes to a richtext object.")
 
     @property
     def style(self):
@@ -323,7 +324,7 @@ class paragraph(_node):
                     words = itertools.chain(iter([(previous_line.last_word_idx,
                                                    remainder,),]),
                                             words)
-            
+
             self.paragraph = paragraph
             self.width = width
             self.hyphenation_remainder = None
@@ -336,6 +337,12 @@ class paragraph(_node):
             old_space_width = 0
             for idx, word in words:
                 word_width = word.width()
+
+                if word_width > width:
+                    # The word is wider than the box we render into.
+                    # To avoid an infinet loop, we render it outside the box.
+                    word_width = width
+                
                 space_width = word.space_width()
                 
                 if self.space_used + old_space_width + word_width <= width:
@@ -434,7 +441,7 @@ class paragraph(_node):
                    "right": right_xs,
                    "center": center_xs,
                    "justified": justify_xs, }[self.paragraph.style.text_align] 
-            
+
             for x, word in zip(xs(), self):
                 if x > 0 : print >> canvas, x, 0, "moveto"
                 word.render(canvas)
@@ -677,7 +684,7 @@ class syllable(_node):
     def hyphen_width(self):
         metric = self.font_metrics.get(ord(hyphen_character), None)
         if metric is None:
-            metric = self.font_metrics.get(" ", None)
+            metric = self.font_metrics.get("-", None)
             if metric is None:
                 return self.space_width()
         
@@ -707,33 +714,16 @@ class syllable(_node):
         font_wrapper = canvas.page.register_font(font)
         font_size = self.style.font_size        
         
-        current_font = getattr(canvas.page, "_syllable__current_font", None)
-        if current_font:
-            ps_name, size, color = current_font
-        else:
-            ps_name, size, color = None, None, None,
-
-        if not (ps_name == font.ps_name and \
-                size == font_size and \
-                color == self.style.color ):
-            
-            # We have to set and select the font
-            print >> canvas, "/%s findfont" % font_wrapper.ps_name()
-            print >> canvas, "%f scalefont" % font_size
-            print >> canvas, "setfont"
-            print >> canvas, self.style.color
-
-            canvas.page._syllable__current_font = ( font_wrapper.ps_name,
-                                                    font_size,
-                                                    self.style.color, )
+        # We have to set and select the font
+        print >> canvas, "/%s findfont" % font_wrapper.ps_name()
+        print >> canvas, "%f scalefont" % font_size
+        print >> canvas, "setfont"
+        print >> canvas, self.style.color
 
         letters = list(self.text_transformed())
-            
+
         if with_hyphen:
-            if font_wrapper.font.has_char(hyphen_character):
-                letters.append(hyphen_character)
-            else:
-                letters.append("-")
+            letters.append(hyphen_character)
                 
         def kerning_for_pairs():
             """

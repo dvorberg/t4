@@ -32,14 +32,15 @@ This module implements datatype classes that are specific to PostgreSQL.
 """
 
 # Python
-import sys, string, types
+import sys, string, types, json as py_json
 from uuid import UUID
-
 
 # orm
 from t4 import sql
 from t4.orm.datatypes import *
 from t4.validators import ip_address_validator
+
+from datasource import psycopg2_version
 
 # Some regular expressions that may come in handy
 point_re = re.compile(r"\(?\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)?")
@@ -101,6 +102,39 @@ class bytea(datatype):
     sql_literal_class = bytea_literal
 
 blob = bytea
+
+
+class money_literal(sql.literal):
+    """
+    The string representation of the passed value is transferred to the
+    database and converted to MONEY there. 
+    """
+    def __init__(self, value):
+        sql.literal.__init__(self, str(value) + "::money")
+
+
+class money(datatype):
+    """
+    The money datatype accepts a variety of formats. It will be
+    converted to a string using str() and casted to MONEY by
+    PostgreSQL on use. Output will be casted to NUMERIC on SELECT and
+    will be returned as a decimal.Decimal instance.
+    """
+    sql_literal_class = money_literal
+    
+    def __convert__(self, value):
+        return value
+
+    def __set_from_result__(self, ds, dbobj, value):
+        setattr(dbobj, self.data_attribute_name(),
+                self.__convert__(value))    
+
+    def select_expression(self, dbclass, full_column_names):
+        identifyer = "%s-money-expression" % self.column.name()
+        return sql.expression(
+            datatype.select_expression(self, dbclass, full_column_names),
+            "::NUMERIC", _identifyer=identifyer)
+        
 
 class inet(string):
     """
@@ -178,7 +212,7 @@ class uuid(datatype):
             if not isinstance(value, UUID):
                 return UUID(value)
             else:
-                return valuet4pg_catalog_model
+                return value
 
 class tsvector_data:
     def __hash__(self):
@@ -201,17 +235,20 @@ class to_tsvector_expression(sql.expression):
         for key in texts.keys():
             if strip(texts[key]) == "":
                 del texts[key]
-        
-        for weight, text in texts.items():
-            if type(text) != types.UnicodeType: text = unicode(text)
-            self._append( ("setweight(",
-                           "  to_tsvector(",
-                           sql.string_literal(configuration_name), ", ",
-                           sql.unicode_literal(text),
-                           "), ", sql.string_literal(upper(weight)), ")",
-                           "||",) )
-        if len(self._parts) > 0:
-            self._parts.pop() # Remove last ||
+
+        if len(texts) == 0:
+            self._parts = ["NULL",]
+        else:
+            for weight, text in texts.items():
+                if type(text) != types.UnicodeType: text = unicode(text)
+                self._append( ("setweight(",
+                               "  to_tsvector(",
+                               sql.string_literal(configuration_name), ", ",
+                               sql.unicode_literal(text),
+                               "), ", sql.string_literal(upper(weight)), ")",
+                               "||",) )
+            if len(self._parts) > 0:
+                self._parts.pop() # Remove last ||
             
 
 class tsvector(datatype):
@@ -232,14 +269,80 @@ class tsvector(datatype):
                          
     def sql_literal(self, dbobj):
         data = getattr(dbobj, self.data_attribute_name(), None)
-        if data and data.texts:
-            return to_tsvector_expression(data.configuration_name,
-                                          data.texts)
-        else:
-            return "NULL"
+        return to_tsvector_expression(data.configuration_name,
+                                      data.texts)
 
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, dbobj):
         return False
+
+class json(datatype):
+    """
+    Represent a regular JSON column (rather than JSONB column, see
+    below); psocopg2 converts the retrieved JSON object to Python for
+    us.
+    """
+    sql_literal_class = sql.json_literal
+    
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False,
+                 empty_object_on_null=False):
+        """
+        If empty_object_on_null is set for a json column, a NULL values
+        for this column will be represented in Python as an empty dict.
+        """
+        datatype.__init__(self, column, title, validators, has_default)
+        self.empty_object_on_null=empty_object_on_null
+
+        if psycopg2_version < (2,5):
+            import psycopg2
+            raise NotImplementedError(("The JSON datatype required "
+                                       "psycopg2 >= 2.5, found %s"
+                                       ) % repr(psycopg2))
+        
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        if value is None and self.empty_object_on_null: value = "{}"
+        if type(value) == types.StringType:
+            raise ValueError("STRING " + self.attribute_name)
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    
+class jsonb(json):
+    """
+    This datatype will use json.dumps and json.loads to convert input
+    values to JSON on their way to and from the database. For the
+    regular JSON type, psycopg2 does this for us.
+    """
+    sql_literal_class = sql.json_literal
+    
+    def __set_from_result__(self, ds, dbobj, value):
+        """
+        This method evaulates the value into a Python datastructure.
+        """
+        if value is None and self.empty_object_on_null: value = "{}"
+        
+        #value = py_json.loads(value)
+
+        if type(value) == types.StringType:
+            raise ValueError("STRING " + self.attribute_name)
+        
+        setattr(dbobj, self.data_attribute_name(), value)
+
+    def __convert__(self, value):
+        """
+        Since we store the Python object 'as is', convert does nothing.
+        """
+        return value
+
+    

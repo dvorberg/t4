@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002-2014 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -136,7 +136,23 @@ class datatype(property):
         except AttributeError:
             from exceptions import DatatypeMustBeUsedInClassDefinition
             raise DatatypeMustBeUsedInClassDefinition(self.__class__.__name__)
+
+    def expression_attribute_name(self):
+        return " expression" + self.data_attribute_name()
         
+    def is_set_to_an_expression(self, dbobj):
+        return hasattr(dbobj, self.expression_attribute_name())
+
+    def set_to_an_expression(self, dbobj, expression):
+        setattr(dbobj, self.expression_attribute_name(), expression)
+
+    def expression(self, dbobj):
+        return getattr(dbobj, self.expression_attribute_name(), None)
+
+    def remove_expression(self, dbobj):
+        if self.is_set_to_an_expression(dbobj):
+            delattr(dbobj, self.expression_attribute_name())
+    
     def __get__(self, dbobj, owner="owner? Like owner of what??"):
         """
         See the Python Language Reference, chapter 3.3.2.2 for details on
@@ -181,15 +197,17 @@ class datatype(property):
         for data retrieved from the RDBMS. See below.
         """
         self.check_dbobj(dbobj)
-        
+
         if isinstance(value, sql.expression):
-            setattr(dbobj, " expression" + self.data_attribute_name(), value)
+            self.set_to_an_expression(dbobj, value)
             if self.isset(dbobj):
                 # Remove the current value from the dbobj so we don't
                 # return a value that's not in sync with the database.
                 delattr(dbobj, self.data_attribute_name())                
-                dbobj.__register_change__(self)
+            dbobj.__register_change__(self)
         else:
+            self.remove_expression(dbobj)
+                
             if value is not None: value = self.__convert__(value)
 
             for validator in self.validators:
@@ -202,6 +220,7 @@ class datatype(property):
                 dbobj.__register_change__(self)
 
     def __set_from_result__(self, ds, dbobj, value):
+        self.remove_expression(dbobj)            
         setattr(dbobj, self.data_attribute_name(),
                 self.__convert__(value))
 
@@ -218,12 +237,28 @@ class datatype(property):
         @returns: True, if this property is set, otherwise... well.. False.
         """
         return hasattr(dbobj, self.data_attribute_name())
+    
+    def update_expression(self, dbobj):
+        """
+        The expression this function returns is used in INSERT and UPDATE
+        statements to represet this column’s value. May return None. 
+        """
+        if self.is_set_to_an_expression(dbobj):
+            return self.expression(dbobj)
+        else:
+            return self.sql_literal(dbobj)
 
-    def isexpression(self, dbobj):
-        return hasattr(dbobj, " expression" + self.data_attribute_name())
-
-    def expression(self, dbobj):
-        return getattr(dbobj, " expression" + self.data_attribute_name())
+    def select_expression(self, dbclass, full_column_names):
+        """
+        The expression this function returns is used to SELECT this column
+        from the database.
+        """
+        if full_column_names:
+            return sql.column(self.column.name(), dbclass.__relation__,
+                              self.column.quote())
+        else:
+            return self.column
+        
     
     def __convert__(self, value):
         """
@@ -255,21 +290,14 @@ class datatype(property):
             else:
                 return self.sql_literal_class(value)
     
-    def __select_this_column__(self):
-        """
-        Indicate whether this column shall be included in SELECT statements.
-        True by default, it will return False for most relationships.
-        """
-        return True
-
     def __select_after_insert__(self, dbobj):
         """
         Indicate whether this column needs to be SELECTed after the dbobj has
         been inserted to pick up information supplied by backend as by SQL
         default values and auto increment columns.
         """
-        return (self.has_default and not self.isset(dbobj)) or \
-            self.isexpression(dbobj)
+        return ( not self.isset(dbobj) and \
+                     (self.has_default or self.is_set_to_an_expression(dbobj)))
 
     def __delete__(self, dbobj):
         raise NotImplementedError(
@@ -376,6 +404,25 @@ class Unicode(string):
         else:
             return value
 
+class converting_unicode(Unicode):
+    """
+    Rather than complaining about non-unicode input, this datatype
+    will try to convert input values to unicode using the specified
+    `encoding`.
+    """
+    def __init__(self, column=None, title=None,
+                 validators=(), has_default=False, null_on_empty=False,
+                 encoding="utf-8"):
+        Unicode.__init__(self, column, title,
+                         validators, has_default, null_on_empty)
+        self._encoding = encoding
+
+    def __convert__(self, value):
+        if type(value) != UnicodeType:
+            return unicode(str(value), self._encoding)
+        else:
+            return value
+        
 
 class datetime_base(datatype):
     """
@@ -532,6 +579,7 @@ class common_serial(integer):
 
     def __set_from_result__(self, ds, dbobj, value):
         integer.__set_from_result__(self, ds, dbobj, value)
+        
 
 
 class _inside_method:
@@ -552,7 +600,6 @@ class wrapper(datatype):
     All classes derived from wrapper must overload the __copy__ method for
     dbclass inheritance to work properly.
     """
-
     def __init__(self, inside_datatype):
         self.inside_datatype = inside_datatype
 
@@ -584,9 +631,9 @@ class wrapper(datatype):
     def __eq__(self, other):
         """
         This will let the in in L{datatype.check_dbobj} yield True.
-        """        
+        """
         return other == self.inside_datatype
-        
+
     def __copy__(self):
         raise NotImplementedError( "All classes derived from wrapper must "
                                    "overload the __copy__ method for "
@@ -647,8 +694,8 @@ class delayed(wrapper):
 
             return ret
             
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, *args):
         return False
@@ -723,10 +770,12 @@ class expression(wrapper):
         if self.has_default and not self.isset(dbobj):
             return self.default
         else:
-            return wrapper.__get__(self, dbobj, owner)
+            return self.inside_datatype.__get__(dbobj, owner)
 
     def __init_dbclass__(self, dbclass, attribute_name):
+        wrapper.__init_dbclass__(self, dbclass, attribute_name)
         self.inside_datatype.__init_dbclass__(dbclass, attribute_name)
+
         exp = self.expression._parts[:]
         exp.insert(0, "(")
         exp.append(") AS ")
@@ -755,11 +804,19 @@ class expression(wrapper):
 
             exp = n
 
-        self.column = sql.expression(*exp)
+        identifyer = "%s-identifyer" % self.column.name()
+        self._expression = sql.expression(*exp, _identifyer=identifyer)
+
+    def select_expression(self, dbclass, full_column_names):
+        return self._expression
 
     def __copy__(self):
         return expression(self.inside_datatype, self.expression)
     
+    def __repr__(self):
+        return "<expression of type %s: %s>" % ( repr(self.inside_datatype),
+                                                 repr(self._expression), )
+        
 class property_group(datatype):
     """
     This datatype will manage several columns of the same datatype
@@ -895,12 +952,11 @@ class property_group(datatype):
     def sql_literal(self, dbobj):
         return None
 
-    def __select_this_column__(self):
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, dbobj):
         return False
-
     
     class result:
         def __init__(self, parent_dbproperty, dbobj):
@@ -1039,7 +1095,7 @@ class pickle(datatype):
             if value is None:
                 return sql.NULL
             else:
-                pickled = pickle.dumps(value, self.pickle_protocol)
+                pickled = cPickle.dumps(value, self.pickle_protocol)
                 return sql.string_literal(pickled)
     
 class python_literal(datatype):
@@ -1148,7 +1204,7 @@ class enum(string):
         value = str(value)
         
         if not value in self._values:
-            raise ValueError(value)
+            raise ValueError("Not in enum: %s" % repr(value))
         else:
             datatype.__set__(self, dbobj, value)
-    
+

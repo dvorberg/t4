@@ -218,7 +218,7 @@ class datasource_base:
 
         if modify:
             cursor = self.__modify_cursor__()
-            self.__flush_updates__()
+            self.flush_updates()
         else:
             cursor = self.cursor()
 
@@ -231,11 +231,12 @@ class datasource_base:
             
         return self._modify_cursor
 
-    def __flush_updates__(self):
+    def flush_updates(self, select_after_update=False):
         cursor = self.__modify_cursor__()
         for dbobj in self._changed_dbobjs:
-            dbobj.__perform_updates__(cursor)
+            dbobj.__perform_updates__(cursor, select_after_update)
         self._changed_dbobjs = set()
+    __flush_updates__ = flush_updates
         
     def commit(self, *dbobjs, **kw):
         """
@@ -251,7 +252,7 @@ class datasource_base:
         #self._dbconn().commit()
         #self._modify_cursor = None
         #return cursor
-        self.__flush_updates__()
+        self.flush_updates()
         self._dbconn().commit()
     
     def perform_updates(self, *dbobjs, **kw):
@@ -315,10 +316,11 @@ class datasource_base:
             # joins. (And t4.sql can't know about dbclasses).
             if isinstance(clause, sql.group_by) and \
                     len(clause._columns) == 1 and \
-                    hasattr(clause._columns[0], "__select_columns__"):
-                clause._columns = clause._columns[0].__select_columns__(True)
+                    hasattr(clause._columns[0], "__select_expressions__"):
+                clause._columns = clause._columns[0].__select_expressions__(
+                    True)
                 
-        query = sql.select(dbclass.__select_columns__(full_column_names),
+        query = sql.select(dbclass.__select_expressions__(full_column_names),
                            dbclass.__relation__, *clauses)
         
         return self.run_select(dbclass, query)
@@ -395,9 +397,11 @@ class datasource_base:
 
         where = []
         for property, value in zip(primary_key.attributes(), key):
+            literal = property.sql_literal_class(property.__convert__(value))
+            
             where.append(property.column)
             where.append("=")
-            where.append(property.sql_literal_class(value))
+            where.append(literal)
             where.append("AND")
 
         del where[-1] # remove last "AND"
@@ -463,14 +467,12 @@ class datasource_base:
         sql_columns = []
         sql_values = []
         for property in dbobj.__dbproperties__():
-            if property.isset(dbobj) and \
-                   property.column not in sql_columns and \
-                   property.sql_literal(dbobj) is not None:                
-                sql_columns.append(property.column)
-                sql_values.append(property.sql_literal(dbobj))
-            elif property.isexpression(dbobj):
-                sql_columns.append(property.column)
-                sql_values.append(property.expression(dbobj))                
+            
+            if property.isset(dbobj) and property.column not in sql_columns:
+                update_expression = property.update_expression(dbobj)
+                if update_expression is not None:
+                    sql_columns.append(property.column)
+                    sql_values.append(update_expression)
 
         if len(sql_columns) == 0:
             raise DBObjContainsNoData(

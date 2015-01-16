@@ -25,12 +25,12 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os, os.path as op
+import sys, os, os.path as op, types, subprocess, threading
 from random import random
 from string import *
 from types import *
 
-password_specials = "+-/*!&#;$,@§"
+password_specials = "+-/*!&#;$,@"
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
     digits = "0123456789"
@@ -47,10 +47,11 @@ def random_password(length=8, use_specials=True):
             ret.insert(idx, a[int(random() * len(a))])
 
     if len(ret) > length: ret = ret[:length]
-    ret = join(ret, "")
-    return ret
+    return join(ret, "")
 
 def password_good_enough(password):
+    password = str(password)
+    
     if len(password) < 8:
         return False
         
@@ -287,3 +288,75 @@ def here_and_next(seq, end_marker=None):
             yield here, next        
             here = next
 
+def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
+    """
+    Executes cmd using a subprocess (including shell). If `input` is
+    provided, it will be piped into the subprocess, if creates_output
+    is set, its standard output will be captured and returned.
+
+    @returns: A pair as: The return value from subprocess.communicate() ( 
+       a tuple) of various contents and and the (integer) exit code of the
+       subprocess. Usage: ((stdin, stdout), retval) = run_with_timeout(…)
+
+    @raises: IOError if the timeout is exceed.
+    """
+    if type(cmd) == types.ListType:
+        cmd = join(cmd, " ")
+
+    d = {}
+    if input is not None:
+        stdin = subprocess.PIPE
+    else:
+        stdin = None
+
+    if creates_output:
+        stdout = subprocess.PIPE
+    else:
+        stdout = None
+        
+    pipe = subprocess.Popen( cmd, shell=True,
+                             stdin = stdin,
+                             stdout = stdout,
+                             stderr = subprocess.PIPE )
+
+    def target():                        
+        d["output"] = ( pipe.communicate(input), pipe.returncode, )
+
+    thread = threading.Thread(target=target)
+    thread.pipe = pipe
+
+    thread.start()
+
+    thread.join(timeout)
+
+    if thread.is_alive():
+        thread.pipe.terminate()
+        thread.join()
+        raise IOError("Subprocess timeout.")
+
+    return d["output"]
+
+def thumb_size(original_size, maxsize):
+    """
+    Return a tuple as (width, height) for this image when it is scaled
+    down to MAXSIZE from PIL's image.py
+    """
+    ow, oh = original_size
+    mw, mh = maxsize
+
+    if ow < mw and oh < mh:
+        # The original image is smaller than maxsize, we have so scale up!
+        w = mw
+        h = oh * ( mw / ow )
+        if h > mh:
+            h = mh
+            w = ow * ( mh / oh)
+    else:    
+        w = mw
+        h = oh * (mw / ow)
+        
+        if h > mh:            
+            w = ow * (mh / oh)
+            h = mh
+            
+    return (w, h)

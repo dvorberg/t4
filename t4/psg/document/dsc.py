@@ -872,12 +872,16 @@ class section(file_like_buffer):
                     # with it. If we're a pages section, we create a page
                     # subsection, of course.
                     lines.rewind()
-                    if issubclass(cls, document_section): 
-                        self.append(pages_section.parse(self, lines, level+1))
+                    if issubclass(cls, document_section):
+                        self.pages_section = pages_section.parse(
+                            self, lines, level+1)
                     elif issubclass(cls, pages_section):
-                        self.append(page_section.parse(self, lines, level+1))
+                        self.pages_section = page_section.parse(
+                            self, lines, level+1)
                     else:
                         raise StopIteration
+
+                    self.append(self.pages_section)
                     
                 elif keyword in subsection_keywords.keys():
                     # A regular subsection for ourselves.
@@ -1071,6 +1075,57 @@ class object_section(section):
     begin = "BeginObject"
     end = "EndObject"
 
+class pdfpage_setup_buffer(file_like_buffer):
+    """
+    A place to store pdf setup information for a page, that is
+    TrimBox, ArtBox etc. and the required translation. This is handled in
+    such a way so that rendering routines can identify and maybe remove
+    the translation.
+    """
+    def boxtuple(self, box):
+        try:
+            box = float(box)
+        except ValueError:
+            pass
+
+        if type(box) == FloatType:
+            return ( box, box,
+                     self._page.w() + box, self._page.h() + box, )
+        else:
+            return box
+
+    def box_command(self, key, box):
+        if box:
+            tpl = (key,) + self.boxtuple(box)
+            return "[ /%s [%.2f %.2f %.2f %.2f] /PAGE pdfmark\n" % tpl
+        else:
+            return None
+
+    def __init__(self, page, trim=0, art=0, crop=0, bleed=0):
+        file_like_buffer.__init__(self)
+        self._page = page
+
+        print >> self, "% Start pdfpage_setup_buffer", trim, art, crop, bleed
+        
+        # If there is a crop specified, enlarge the page by that much and
+        # translate its contents so that from the callers perspective, our
+        # page has the ‘right’ width and hight.
+        trimbox = self.boxtuple(trim)
+        if trimbox != (0, 0, 0, 0):
+            llx, lly, urx, ury = trimbox
+            page.page_bounding_box = (-llx, -lly, page.w(), page.h())
+            print >> self, llx, lly, "translate % pdfpage()"
+        else:        
+            page.page_bounding_box = (0, 0, w, h,)
+
+        self.append(self.box_command("TrimBox", trim))
+        self.append(self.box_command("ArtBox", art))
+        self.append(self.box_command("CropBox", crop))
+        self.append(self.box_command("BleedBox", bleed))
+
+        print >> self, "% End pdfpage_setup_buffer"
+        
+    
 # Document
     
 class dsc_document(document_section, document):
@@ -1096,7 +1151,8 @@ class dsc_document(document_section, document):
             self.append(defaults_section())
             self.append(prolog_section())
             self.append(self.setup_section)
-            self.append(pages_section())
+            self.pages_section = pages_section()
+            self.append(self.pages_section)
             self.append(trailer_section())
 
             document.__init__(self, title)
@@ -1128,7 +1184,7 @@ class dsc_document(document_section, document):
 
     def page(self, page_size="a4", label=None):
         ret = dsc_page(self, page_size, label)
-        self.append(ret)
+        self.pages_section.append(ret)
         return ret
 
     def pdfpage(self, page_size="a4", label=None,
@@ -1149,46 +1205,26 @@ class dsc_document(document_section, document):
         """
         w, h = parse_paper_size(page_size)
         
-        def boxtuple(box):
-            try:
-                box = float(box)
-            except ValueError:
-                pass
-                
-            if type(box) == FloatType:
-                return ( box, box, w + box, h + box, )
-            else:
-                return box
-        
-        def box_command(key, box):
-            if box:
-                tpl = (key,) + boxtuple(box)
-                return "[ /%s [%.2f %.2f %.2f %.2f] /PAGE pdfmark\n" % tpl
-            else:
-                return None
-
         page = dsc_page(self, page_size, label)
+        page.pagesetup.append(pdfpage_setup_buffer(
+                page, trim, art, crop, bleed))
         self.append(page)
-
-        # If there is a crop specified, enlarge the page by that much and
-        # translate its contents so that from the callers perspective, our
-        # page has the ‘right’ width and hight.
-        trimbox = boxtuple(trim)
-        if trimbox != (0, 0, 0, 0):
-            llx, lly, urx, ury = trimbox
-            page.page_bounding_box = (llx, lly, llx+w, lly+h)
-            print >> page, llx, lly, "translate % pdfpage()"
-        else:        
-            page.page_bounding_box = (0, 0, w, h,)
-
-        page.pagesetup.append(box_command("TrimBox", trim))
-        page.pagesetup.append(box_command("ArtBox", art))
-        page.pagesetup.append(box_command("CropBox", crop))
-        page.pagesetup.append(box_command("BleedBox", bleed))
-
-        
         return page
 
+    def remove_pdfpage_setup(self):
+        """
+        Remove pdfpage_setup instances for all pages’s pagesetup
+        sections and reset the page’s boundingbox.
+        """
+        for index, page in enumerate(self.pages_section):
+            for element in page.pagesetup:
+                if isinstance(element, pdfpage_setup_buffer):
+                    del page.pagesetup[index]
+                    break
+
+    def pages(self):
+        return filter(lambda p: isinstance(p, dsc_page), self.pages_section)
+    
     def output_file(self): return self
 
     def add_font(self, font):
@@ -1376,7 +1412,7 @@ class eps_document(dsc_document):
             # For convenience an eps document still contains a pages section
             # aliasing the single page it contains.
             page = eps_page(self)
-            pages = pages_section()
+            self.pages_section = pages = pages_section()
             pages.append(page)
             self.append(pages)
 

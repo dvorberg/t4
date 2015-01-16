@@ -38,9 +38,9 @@ def html_quote(content, lang="de"):
     return content
 
 opening_quote_re = re.compile(r'(\s+|^)"([0-9a-zA-Z])')
-closing_quote_re = re.compile(r'([^ ])"(\s+|$)')
+closing_quote_re = re.compile(r'([^ ]")"(\s+|$)')
 opening_single_quote_re = re.compile(r"(\s+|^)'([0-9a-zA-Z])")
-closing_single_quote_re = re.compile(r"([^ ])'(\s+|$)")
+closing_single_quote_re = re.compile(r"([^ '])'(\s+|$)")
 date_until_re = re.compile(r'(\d+)\.-(\d+)\.')
 
 def improve_typography(content, lang="de"):
@@ -70,6 +70,10 @@ def improve_typography_html(content, lang):
 
     # Put long dashes where they (might) belog
     content = replace(content, " - ", "&#150;")
+
+    # Ellipsis
+    content = replace(content, " ...", "&nbsp;&hellip;")
+    content = replace(content, "...", "&hellip;")
     
     return content
 
@@ -99,10 +103,19 @@ def improve_typography_unicode(content, lang):
     # Put long dashes where they (might) belog
     content = replace(content, u" - ", u" — ")
 
+    # Ellipsis
+    content = replace(content, " ...", " …")
+    content = replace(content, "...", "…")
+    
     return content
 
 def pretty_money(m, form=False):
-    if type(m) in (StringType, UnicodeType,): return m
+    if type(m) in (StringType, UnicodeType,):
+        try:
+            m = german_float(m)
+        except ValueError:
+            return m
+    
     if m is None:
         return ""
     else:
@@ -180,8 +193,11 @@ def pretty_german_float(f, decimals=2):
     """
     if type(f) == StringType:
         return f
+    if f is None:
+        return ""
         
-    f = float(f)
+    # f = float(f) Don’t do that. If this is a decimal.Decimal, we’d loose
+    # precision!
     
     if f < 0:
         negative = True
@@ -204,3 +220,30 @@ def pretty_german_float(f, decimals=2):
         return "-" + s
     else:
         return s
+
+def pretty_german_integer(i):    
+    s = str(i)
+    ret = ""
+    while len(s) > 3:
+        ret = "." + s[-3:] + ret
+        s = s[:-3]
+
+    return s + ret
+
+def pretty_german_date(pit, with_time=False, with_timezone=False):
+    """
+    Return a pretty representation of this date.
+    """
+    if pit is None:
+        return ""
+
+    if with_time:
+        r = "%s.%s.%s %02i:%02i Uhr" % ( pit.day, pit.month, pit.year,
+                                         pit.hour, pit.minute, )
+    else:
+        r = "%s.%s.%s" % ( pit.day, pit.month, pit.year, )
+
+    if with_timezone:
+        r += " (%s)" % pit.timezone
+
+    return r

@@ -41,9 +41,12 @@ from subfile import subfile
 # file_like_buffer
 from file_like_buffer import file_like_buffer, file_as_buffer
 
+from eps import *
+
 # meassure
 from measure import *
 
 # colors
 from colors import *
 import colors
+

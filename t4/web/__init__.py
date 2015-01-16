@@ -23,7 +23,7 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 
-import json, urllib, urlparse
+import json, urllib, urlparse, tempfile, time
 from title_to_id import title_to_id
 from html_length import html_length, html_area
 from typography import *
@@ -47,3 +47,18 @@ def set_url_param(url, params={}):
     query.update(params)
     return "%s://%s%s?%s" % (url.scheme, url.netloc, url.path,
                              urllib.urlencode(query),)
+
+def html2txt(html):
+    """
+    Uses lynx to dump `html` to a text-only representation.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as fp:
+        try:
+            fp.write(html)
+            fp.close()
+        
+            pipe = os.popen("lynx -dump %s" % fp.name, "r")
+            return pipe.read()
+        finally:
+            os.unlink(fp.name)
+        

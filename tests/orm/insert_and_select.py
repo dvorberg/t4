@@ -33,11 +33,12 @@ retrieve them or part of them.
 import os, unittest, struct, socket
 from types import *
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.datasource import datasource
-from orm2 import sql
-from orm2.debug import sqllog
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.datasource import datasource
+
+from t4 import sql
+from t4.debug import sqllog
 sqllog.verbose = True
 
 
@@ -367,10 +368,14 @@ class host_insert_and_select_test_firebird(unittest.TestCase):
 if __name__ == '__main__':
 
     # IP Number conversion does not seem to work with Python 2.4
-    
+
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(person_insert_and_select_test))
-    # suite.addTest(unittest.makeSuite(host_insert_and_select_test))
+    try:
+        import gadfly
+    except ImportError:
+        pass
+    else:
+        suite.addTest(unittest.makeSuite(person_insert_and_select_test)) 
     
     if os.environ.has_key("ORMTEST_PGSQL_CONN"):
         suite.addTest(unittest.makeSuite(person_insert_and_select_test_pgsql))

@@ -45,7 +45,7 @@ class _pool:
     def __enter__(self):
         zope_connection = self._t4orm_pool.da()
         self._da = zope_connection()
-        self._conn = self._da.getconn()
+        self._conn = self._da.getconn(False)
         _connections = self._t4orm_pool.connection_counters()
         
         key = id(self._conn)

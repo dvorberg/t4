@@ -101,6 +101,8 @@ def boxes(source, styles):
     Return a list of elements.box objects derived from source you can
     append to your own elements.richtext object.
     """
+    source = rstrip(source)
+    
     # If the source is not a unicode string, we try to convert it.
     if type(source) != types.UnicodeType:
         source = unicode(str(source))
@@ -295,7 +297,7 @@ class heading(_block):
             
 class paragraph(_block):    
     pass
-    
+
 class bullet_list(paragraph):
     def __init__(self, styles, parts):
         # Remove the bullet character from the parts.

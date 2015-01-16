@@ -30,16 +30,17 @@
 
 import os, unittest
 
-from orm2.debug import sqllog
-sqllog.buffer_size = 3
+from t4.debug import sqllog
 sqllog.verbose = True
+sqllog.buffer_size = 10
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.relationships import *
-from orm2 import sql
+from t4 import sql
 
-from orm2.datasource import datasource
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.relationships import *
+
+from t4.orm.datasource import datasource
 
 
 # Model Single Column Foreign Key
@@ -82,6 +83,10 @@ class test(unittest.TestCase):
 
 
     def create_tables(self):
+        self.ds.execute("DROP TABLE IF EXISTS domain CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS webserver CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item_category CASCADE")
 
         self.ds.execute("""CREATE TABLE domain (
                               name VARCHAR,
@@ -89,7 +94,7 @@ class test(unittest.TestCase):
                            )""")
 
         self.ds.execute("""CREATE TABLE webserver (
-                              id INTEGER,
+                              id SERIAL,
                               ip_address VARCHAR,
 
                               domain_name VARCHAR,
@@ -97,13 +102,13 @@ class test(unittest.TestCase):
                            )""")   
         
         self.ds.execute("""CREATE TABLE item (
-                              id INTEGER,
+                              id SERIAL,
                               title VARCHAR,
                               item_category_id INTEGER 
                            )""")
         
         self.ds.execute("""CREATE TABLE item_category (
-                              id INTEGER,
+                              id SERIAL,
                               name VARCHAR
                            )""")
 
@@ -121,13 +126,13 @@ class test(unittest.TestCase):
         self.ds.insert(domain(name="t4w", tld="de"))
         self.ds.insert(domain(name="superstyler", tld="de"))
         self.ds.insert(domain(name="apple", tld="com"))
+        print "done"
 
     def tearDown(self):
-        self.ds.execute("DROP TABLE domain")
-        self.ds.execute("DROP TABLE webserver")
-        self.ds.execute("DROP TABLE item")
-        self.ds.execute("DROP TABLE item_category")
-        
+        self.ds.execute("DROP TABLE IF EXISTS domain CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS webserver CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item_category CASCADE")
 
     def test_single_key_no_null(self):
         """
@@ -141,15 +146,22 @@ class test(unittest.TestCase):
         # The most simple case...
         item_one = item(title="Item One", category=category_three)
         self.ds.insert(item_one)
-        # self.assertEqual(sqllog.queries[-1], "INSERT INTO item(item_category_id, title, id) VALUES (3, 'Item One', 1)")
+
         self.assertEqual(item_one.category.name, "Category Three")
+
+        print "*"*60
+        print item_one
+        print item_one.category
         
         item_one.category = category_one
+        print "*"*60
         self.assertEqual(item_one.category.name, "Category One")
+        print item_one.category.name
+        print "*"*60
 
         self.ds.commit(item_one)
         
-        self.assertEqual(sqllog.queries[0],
+        self.assertEqual(sqllog.queries[-3],
                          "UPDATE item SET item_category_id = 1 WHERE id = 1")
 
     def test_multiple_key_no_null(self):
@@ -168,6 +180,10 @@ class test(unittest.TestCase):
 
 
     def tearDown(self):
+        self.ds.execute("DROP TABLE IF EXISTS domain CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS webserver CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item_category CASCADE")
         self.ds.close()
 
 class test_grown_up(test):
@@ -208,6 +224,11 @@ class test_pgsql(test_grown_up):
         
 
     def create_tables(self):
+        self.ds.execute("DROP TABLE IF EXISTS domain CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS webserver CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item CASCADE")
+        self.ds.execute("DROP TABLE IF EXISTS item_category CASCADE")
+
 
         self.ds.execute("""CREATE TABLE domain (
                               name TEXT,
@@ -245,7 +266,8 @@ class test_pgsql(test_grown_up):
         self.ds.execute("DROP TABLE domain CASCADE")
         self.ds.execute("DROP TABLE webserver CASCADE")
         self.ds.execute("DROP TABLE item CASCADE")
-        self.ds.execute("DROP TABLE item_category CASCADE") 
+        self.ds.execute("DROP TABLE item_category CASCADE")
+        self.ds.close()
         
 
 class test_mysql(test_grown_up):
@@ -297,12 +319,12 @@ class test_mysql(test_grown_up):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(test))
+    # suite.addTest(unittest.makeSuite(test))
 
     if os.environ.has_key("ORMTEST_PGSQL_CONN"):
         suite.addTest(unittest.makeSuite(test_pgsql))
 
-    if os.environ.has_key("ORMTEST_MYSQL_CONN"):
-        suite.addTest(unittest.makeSuite(test_mysql))
+    #if os.environ.has_key("ORMTEST_MYSQL_CONN"):
+    #    suite.addTest(unittest.makeSuite(test_mysql))
 
     unittest.TextTestRunner(verbosity=2).run(suite)

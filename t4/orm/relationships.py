@@ -85,9 +85,6 @@ class relationship(datatype):
         """
         return True
 
-    def isexpression(self, dbobj):
-        return False
-        
     def __convert__(self, value):
         "Relationships do not need a convert method or can't use it anyway."
         raise NotImplementedError(__doc__)
@@ -96,11 +93,8 @@ class relationship(datatype):
         "This relationship cannot be represented as an SQL literal."
         return None
 
-    def __select_this_column__(self):
-        """
-        @returns: False. Most relationships do not need to select anything.
-        """
-        return False
+    def select_expression(self, dbclass, full_column_names):
+        return None
 
     def __select_after_insert__(self, dbobj):
         """
@@ -179,30 +173,18 @@ class _2many(relationship):
                 
 
     def __init_dbclass__(self, dbclass, attribute_name):
-#         self.dbclass = dbclass
-#         self.attribute_name = attribute_name
+        self.dbclass = dbclass
+        self.attribute_name = attribute_name
 
-#         if self.foreign_key_column is None:
-#             self.foreign_key_column = "%s_%s" % (dbclass.__relation__,
-#                                                  child_class.__primary_key__,)
-
-#         if self.own_key is None:
-#             self.own_key = dbclass.__dict__[dbclass.__primary_key__]
-        
-#         # We do not manage a column in the owner's table
-#         # nor a piece of data in the owner inself.
-#         # Deleting them will cause error messages on access attempts ;)
-#         if hasattr(self, "column"): del self.column        
-#         if hasattr(self, "_data_attribute_name"):
-#             del self._data_attribute_name        
-        pass
-
-    def __get__(self, dbobj, owner):
+    def __get__(self, dbobj, owner=None):
         return self.result(dbobj, self)
 
     def __set__(self, dbobj, value):
         raise NotImplementedError()
     
+    def update_expression(self, dbobj):
+        return None
+
 class one2many(_2many):
     """
     A one2many relationship is probably the most common relationship between
@@ -305,7 +287,7 @@ class one2many(_2many):
                 self.ds().insert(a)
 
     def __init_dbclass__(self, dbclass, attribute_name):
-        pass
+        _2many.__init_dbclass__(self, dbclass, attribute_name)
 
     def __set__(self, dbobj, value):
         """
@@ -318,76 +300,6 @@ class one2many(_2many):
         """        
         raise NotImplementedError("Not implemented, yet")
 
-
-
-class many2one(relationship):
-    def __init__(self, child_class, child_key=None, foreign_key=None,
-                 title=None, has_default=None):
-        
-        relationship.__init__(self, child_class, child_key, foreign_key,
-                              title, has_default)
-        
-        if self.child_key is None:
-            child_pkey = keys.primary_key(child_class)
-            self.child_key = child_pkey.attribute_names()
-
-        if self.foreign_key is None:
-            foreign_key_name = "%s_%s" % ( self.child_class.__name__,
-                                           child_pkey.attribute_name(), )
-            self.foreign_key = ( foreign_key_name, )
-                
-            
-    def __set__(self, dbobj, value):
-        foreign_key = keys.foreign_key(dbobj,
-                                       self.child_class,
-                                       self.foreign_key,
-                                       self.child_key)
-        
-        if isinstance(value, self.child_class):
-            if not value.__is_stored__():
-                raise ObjectMustBeInserted("To set a many2one/one2one value "
-                                           "the child object must have been "
-                                           "inserted into the database.")
-            setattr(dbobj, self.data_attribute_name(), value)
-
-            for my_attr, child_attr in zip(foreign_key.my_attribute_names(),
-                                          foreign_key.other_attribute_names()):
-                setattr(dbobj, my_attr, getattr(value, child_attr))
-
-        elif value is None:
-            for my_attr in foreign_key.my_attribute_names():
-                setattr(dbobj, my_attr, None)
-
-            dbobj.__ds__().flush_updates()
-
-        else:
-            msg = "The %s attribute can only be set to objects of class %s"
-            msg = msg % ( self.attribute_name, self.child_class.__name__, )
-            raise ValueError(msg)
-
-    def __get__(self, dbobj, owner):        
-        if self.isset(dbobj):
-            # If the this has run before the value has been cached
-            if hasattr(dbobj, self.data_attribute_name()):
-                return getattr(dbobj, self.data_attribute_name())
-            else:
-                foreign_key = keys.foreign_key(dbobj,
-                                               self.child_class,
-                                               self.foreign_key,
-                                               self.child_key)
-                
-                child = dbobj.__ds__().select_one(self.child_class,
-                                                  foreign_key.other_where())
-
-                setattr(dbobj, self.data_attribute_name(), child)
-                
-                return child
-                
-        else:
-            # this will raise an exception (w/ a complicated error message)
-            relationship.__get__(self, dbobj, owner)
-
-one2one = many2one
 
 class many2many(_2many):
     """
@@ -429,9 +341,10 @@ class many2many(_2many):
             clauses = self.add_where(clauses)
 
             query = sql.select(
-                self.child_class().__select_columns__(full_column_names=True),
+                self.child_class().__select_expressions__(
+                    full_column_names=True),
                 relations, *clauses)
-
+            
             return self.ds().run_select(
                 self.child_class(), query)
                                                   
@@ -449,7 +362,8 @@ class many2many(_2many):
                                  self.child_class().__relation__, ),
                                *clauses)
             
-            return self.ds().query_one(query)
+            len, = self.ds().query_one(query)
+            return len
 
         def where(self):
             """
@@ -607,7 +521,8 @@ class many2many(_2many):
         try:
             value = list(value) 
         except TypeError:
-            raise ValueError("You must assing a sequence of %s to this dbproperty!" % repr(self.child_class))
+            raise ValueError( ("You must assing a sequence of %s to this "
+                               "dbproperty!") % repr(self.child_class))
             
         # delete all links from the link_relation that point to the dbobj
         command = sql.delete(self.link_relation,
@@ -731,7 +646,7 @@ class many2one(relationship):
             
 
 
-    def __get__(self, dbobj, owner):
+    def __get__(self, dbobj, owner=None):
         if self.cache and \
                hasattr(dbobj, self.data_attribute_name() + "_cache"):
             return getattr(dbobj, self.data_attribute_name() + "_cache")
@@ -809,8 +724,9 @@ class many2one(relationship):
                 self.__ds__().insert(value)
 
             if self.column is not None:
-                datatype.__set__(self, dbobj, value.__primary_key__.
-                                               attribute().__get__(value))
+                key = value.__primary_key__.attribute().__get__(value)
+                assert key is not None, ValueError
+                datatype.__set__(self, dbobj, key)
             else:
                 foreign_key = keys.foreign_key(dbobj, self.child_class,
                                                self.foreign_key,
@@ -819,6 +735,7 @@ class many2one(relationship):
                 for my, other in zip(foreign_key.my_attributes(),
                                      foreign_key.other_attributes()):
                     my.__set__(dbobj, other.__get__(value))
+                    
 
             if self.cache:
                 setattr(dbobj, self.data_attribute_name() + "_cache", value)
@@ -846,9 +763,11 @@ class many2one(relationship):
         else:
             return datatype.sql_literal(self, dbobj)
 
-    def __select_this_column__(self):
+    def select_expression(self, dbclass, full_column_names):
         if self.column is not None:
-            return True
+            return datatype.select_expression(self, dbclass, full_column_names)
         else:
-            return False
+            return None
+
+one2one = many2one
 

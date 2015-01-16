@@ -30,17 +30,16 @@
 
 import os, unittest
 
-from orm2.debug import sqllog
-#sqllog.verbose = True
-#sqllog.buffer_size = 10
+from t4.debug import sqllog
+sqllog.verbose = True
+sqllog.buffer_size = 10
 
-from orm2.dbobject import dbobject
-from orm2.datatypes import *
-from orm2.relationships import *
-from orm2 import sql
+from t4.orm.dbobject import dbobject
+from t4.orm.datatypes import *
+from t4.orm.relationships import *
+from t4.orm.datasource import datasource
 
-from orm2.datasource import datasource
-
+from t4 import sql
 
 # Model
 
@@ -249,7 +248,7 @@ class many2many_test_mysql(many2many_test):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(many2many_test))
+    # suite.addTest(unittest.makeSuite(many2many_test))
 
     if os.environ.has_key("ORMTEST_PGSQL_CONN"):
         suite.addTest(unittest.makeSuite(many2many_test_pgsql))

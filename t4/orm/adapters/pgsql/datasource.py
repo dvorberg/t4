@@ -46,6 +46,14 @@ if dbapi is None:
     except ImportError:
         dbapi = None
 
+try:
+    import psycopg2
+    number, rest = psycopg2.__version__.split(" ", 1)
+    psycopg2_version = tuple(map(int, number.split(".")))
+except ImportError:
+    psycopg2_version = None
+        
+
 if dbapi is None:
     try:
         import psycopg 
@@ -384,7 +392,7 @@ class datasource(t4.orm.datasource.datasource_base, sql.pgsql_backend):
         elif isinstance(primary_key_attribute, common_serial):
             relident = dbobj.__relation__._name
             seqname = sql.identifyer(relident.name() + "_id_seq",
-                                     identifyer.quotes())
+                                     False)
             
             where = sql.where(sql.expression( "id = ",
                                               "currval('", seqname, "')"))

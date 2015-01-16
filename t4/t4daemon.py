@@ -47,7 +47,7 @@ class t4daemon(daemon):
     self.options and self.args contain options and arguments supplied on
        the command line. Provide your own Option Parser by overwriting
        option_parser() and make sure they fit overwriting
-       validate_options().
+       validate_params().
 
     A python daemon which is its own /etc/init.d/... script will look
     like this:
@@ -58,7 +58,7 @@ class t4daemon(daemon):
           ...
           return op
 
-       def validate_options(self, option_parser, options, args):
+       def validate_params(self, option_parser, options, args):
           ...
        
        def run(self):
@@ -128,7 +128,13 @@ class t4daemon(daemon):
         Options and arguments will be available as self.options and
         self.args respectively.
         """
-        return optparse.OptionParser()
+        return optparse.OptionParser(usage=daemon.usage(self))
+
+    def usage(self):
+        """
+        Return the usage information for this program.
+        """
+        return self.option_parser().format_help()
 
     def validate_params(self, option_parser, options, args):
         """
