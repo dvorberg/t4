@@ -38,6 +38,7 @@ from uuid import UUID
 # orm
 from t4 import sql
 from t4.orm.datatypes import *
+from t4.orm.exceptions import ObjectAlreadyInserted
 from t4.validators import ip_address_validator
 
 from datasource import psycopg2_version
