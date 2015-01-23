@@ -77,7 +77,7 @@ def box3(box, tr, **kw):
     box.typeset(two_paragraphs)
 
 def box4(box, tr, he, **kw):
-    box.set_font(tr, font_size=9, paragraph_spacing=18,
+    box.set_font(he, font_size=9, paragraph_spacing=18,
                  line_spacing=3, alignment="left", kerning=True)
     box.typeset(two_paragraphs_greek)
 
