@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- mode: python; coding: utf-8; -*-
 
-# (c) April 2012 Diedrich Vorberg <diedrich@tux4web.de>
+# (c) April 2012 
+# (c) November 2014 Diedrich Vorberg <diedrich@tux4web.de>
 
 import sys, os, os.path as op, string, re, subprocess, optparse, tempfile, \
     glob
@@ -9,7 +10,12 @@ import sys, os, os.path as op, string, re, subprocess, optparse, tempfile, \
 from t4.debug import log, debug
 from t4.psg.document.dsc import dsc_document
 from t4.psg.util import PAPERSIZES, mm
-from t4.psg.drawing.box import eps_image, box
+from t4.psg.drawing.box import eps_image, raster_image, box
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 original_eps_image_write_to = eps_image.write_to
@@ -35,7 +41,7 @@ def parse_options():
     add("-v", "--verbose", dest="verbose", default=False, action="store_true",
         help="Make the script say what's going on.")
     add("-d", "--debug", dest="debug", default=False, action="store_true",
-        help="Be more verbose and do not delete intermediate files.")
+        help="Be even more verbose and do not delete intermediate files.")
     add("-o", None, dest="outfilename", default=None,
         help="Output file name. Defaults to <infilename>.ebook.pdf")
     add("-p", "--papersize", dest="papersize", default="a5",
@@ -43,7 +49,7 @@ def parse_options():
     add("-m", "--margin", dest="margin", default="0",
         help="Space to leave blank around the split images on each page.")
     add("-g", "--gs", dest="gs", default=None,
-        help="Name of the Ghostscript executable. (GS 8.7 prefered!)")
+        help="Name of the Ghostscript executable.")
     
     opts, args = parser.parse_args()
 
@@ -66,14 +72,20 @@ def resolution_string(options):
         else:
             return a + "x" + b
 
-outfile_re = re.compile(r".*?out(\d+)\.eps")
 def create_temporary_files(tmpdir, infilename, options):
     print >> log, "Creating temporary EPS files from", infilename    
 
+    #gsdevice = "tiffgray"
+    #ext = "tiff"
+    gsdevice = "epswrite"
+    ext = "eps"
+    
+    outfile_re = re.compile(r".*?out(\d+)\.%s" % ext)
+
     cmd = [ options.gs, "-dNOPAUSE", "-dBATCH",
             "-r" + resolution_string(options),
-            "-sDEVICE=epswrite", "-dUseCropBox",
-            "-sOutputFile=%s/out%%d.eps" % tmpdir,
+            "-sDEVICE=%s" % gsdevice, "-dUseCropBox",
+            "-sOutputFile=%s/out%%d.%s" % ( tmpdir, ext, ),
             infilename, ]
     
     print >> log, string.join(cmd, " ")
@@ -91,7 +103,7 @@ def create_temporary_files(tmpdir, infilename, options):
     if gs.returncode != 0:
         # If GS failed we have to raise an appropriate exception.
         if pipe is not None:
-            # If we're subpressed GS's output, this is the time to let the user
+            # If we've subpressed GS's output, this is the time to let the user
             # know what it said.
             print stdout.read()
             print
@@ -99,7 +111,7 @@ def create_temporary_files(tmpdir, infilename, options):
         raise IOError("Ghostscript failed.")
 
     # Use glob to create a list of the temporary files we created.
-    filenames = glob.glob(tmpdir + "/out*.eps")
+    filenames = glob.glob("%s/out*.%s" % (tmpdir, ext,))
 
     # Sort the filenames by their numerical component so the pages are
     # in the right order.
@@ -128,9 +140,17 @@ class pages_image:
 
     def add_image(self, page, idx, margin):
         if self.eps_image is None:
-            self.eps_image = eps_image(page,
-                                       open(self.filename),
-                                       document_level=False)
+            if self.filename.endswith(".eps"):
+                self.eps_image = eps_image(page,
+                                           open(self.filename),
+                                           document_level=False)
+            else:
+                if Image is None:
+                    raise ImportError("PIL not installed.")
+                self.eps_image = raster_image(page,
+                                              Image.open(self.filename),
+                                              document_level=False)
+                
 
         canvas = page.canvas(margin=margin)
 
@@ -138,14 +158,14 @@ class pages_image:
 
         if imagew == 0.0 or imageh == 0.0:
             # An empty page? GS 9 seems to create these.
-            # An empty page?
             return
         
         # Scale the image to the canvas height
         contenth = canvas.h()
         contentw = imagew * ( contenth / imageh )
 
-        # If the resultingbox is too wide, scale the image to the canvas width.
+        # If the resulting box is too wide, scale the image to the
+        # canvas width.
         if contentw > canvas.w():
             contentw = canvas.w()
             contenth = imageh * ( contentw / imagew )
@@ -166,8 +186,7 @@ class pages_image:
         # to center the inner box on the canvas.
         padding_left = (canvas.w() - contentw) / 2
         padding_top = (canvas.h() - contenth) / 2
-        print >> canvas.head, padding_left, padding_top, "translate"
-        
+        print >> canvas.head, padding_left, padding_top, "translate"        
         
         inner.append(self.eps_image)
         
@@ -186,6 +205,7 @@ def run_result_through_postscript(infilename, outfilename,
             "-sDEVICE=pdfwrite",
             "-sPAPERSIZE=%s" % options.papersize,
             "-sOutputFile=%s" % outfilename,
+            "-dProcessColorModel=/DeviceGray",
             "-", ]
     
     print >> log, string.join(cmd, " ")
@@ -204,8 +224,8 @@ def run_result_through_postscript(infilename, outfilename,
     if gs.returncode != 0:
         # If GS failed we have to raise an appropriate exception.
         if pipe is not None:
-            # If we're subpressed GS's output, this is the time to let the user
-            # know what it said.
+            # If we've subpressed GS's output, this is the time to let 
+            # the user know what it said.
             print stdout.read()
             print
             print stderr.read()
@@ -230,7 +250,6 @@ def process(tmpdir, infilename, options):
 
     if op.exists(outfilename):
         raise IOError("File exists: " + repr(outfilename))
-
     
     # Create temporary files
     tmpfilenames = create_temporary_files(tmpdir, infilename, options)
@@ -245,14 +264,13 @@ def process(tmpdir, infilename, options):
     for i in pages_images:
         i.add_pages(document, papersize, margin)
 
-    #print >> log, "Creating temporary postscript file."    
-    #tmpoutfilename = op.join(tmpdir, "out.ps")
-    #fp = open(tmpoutfilename, "w")
-    #document.write_to(fp)
-    #fp.close()
+    print >> log, "Creating temporary postscript file."    
+    fp = open(outfilename + ".ps", "w")
+    document.write_to(fp)
+    fp.close()
         
-    run_result_through_postscript(infilename, outfilename,
-                                  document, options)
+    #run_result_through_postscript(infilename, outfilename,
+    #                              document, options)
 
 def command_exists(cmd):
     fp = os.popen("which " + cmd)
