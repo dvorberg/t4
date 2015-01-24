@@ -109,8 +109,8 @@ class logstream(object):
         else:
             return False
         
-    def _make_verbose(self, option, opt, value, parser):
-        self.verbose = True
+    def _make_verbose(self, *args, **kw):
+        self.verbose = True        
             
 class logfile(logstream):
     def __init__(self, fn=None):
@@ -158,11 +158,21 @@ class _log(logstream):
         option_parser.add_option(short, long, action="callback",
                                  callback=self._make_verbose,
                                  help="Be verbose (to stderr)")
+    def add_argument(self, argument_parser, short="-v", long="--verbose", ):
+        argument_parser.add_option([short, long,], type=self._make_verbose,
+                                   metavar="", help="Be verbose (to stderr)")
+                                     
+        
 class _debug(logstream):
     def add_option(self, option_parser, short="-d", long="--debug"):
         option_parser.add_option(short, long, action="callback",
                                  callback=self._make_verbose,
                                  help="Print debug messages (to stderr)")
+        
+    def add_argument(self, argument_parser, short="-d", long="--debug", ):
+        argument_parser.add_option([short, long,], type=self._make_verbose,
+                                   metavar="", 
+                                   help="Print debug messages (to stderr)")
         
 class _sql(logstream):
     """
@@ -208,6 +218,16 @@ class _sql(logstream):
             "--show-sql", action="callback",
             callback=self._make_verbose,
             help="Log SQL queries and commands (to stderr)")
+
+    def _argparse_callback(self, filename):
+        self.verbose = True
+        if filename != "-":
+            self.fp = open(filename, "a")
+        
+    def add_argument(self, argument_parser):
+        argument_parser.add_argument(
+            "--show-sql", action="store_true",
+            dest="sqllog", help="Log SQL queries and commands (to stderr)")
         
 log = _log()
 debug = _debug()
