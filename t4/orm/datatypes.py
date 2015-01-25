@@ -1201,10 +1201,10 @@ class enum(string):
         self._values = values
 
     def __set__(self, dbobj, value):
-        value = str(value)
-        
-        if not value in self._values:
-            raise ValueError("Not in enum: %s" % repr(value))
-        else:
-            datatype.__set__(self, dbobj, value)
+        if value is not None :
+            value = str(value)
+            if not value in self._values:
+                raise ValueError("Not in enum: %s" % repr(value))
+                
+        datatype.__set__(self, dbobj, value)
 
