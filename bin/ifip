@@ -1,0 +1,54 @@
+#!/usr/bin/python
+# -*- coding: utf-8; mode: python; -*-
+
+import sys, os, re, argparse
+
+info_re = re.compile(r"(inet addr|Mask|inet6 addr):"
+                     r"(?:(\d+\.\d+\.\d+\.\d+)|\s*([a-f0-9:]+)/(\d+))")
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Print address or netmask of a network interface.")
+    ap.add_argument("ifname", help="Network interface to query")
+    group = ap.add_mutually_exclusive_group()
+    group.add_argument("-m", help="Print ip/netmask.", dest="mask",
+                       action="store_true")
+    group.add_argument("-M", help="Print the netmask, only.", dest="mask_only",
+                       action="store_true")
+    ap.add_argument("-6", help="Print ipv6 address and/or mask.", dest="ipv6",
+                    action="store_true")
+
+    args = ap.parse_args()
+    
+    fp = os.popen("LANG=C /sbin/ifconfig " + args.ifname)
+    output = fp.read()
+        
+    result = info_re.findall(output)
+    ip, mask, ip6, mask6 = None, None, None, None
+    for field, a, b, c in result:
+        if field == "inet addr":
+            ip = a
+        elif field == "Mask":
+            mask = a
+        elif field == "inet6 addr":
+            ip6 = b
+            mask6 = c
+            
+    if args.ipv6:
+        if ip6 is None:
+            args.error("No IPv6 addresses found on interface.")
+            
+        ip = ip6
+        mask = mask6
+    else:
+        if ip is None:
+            args.error("No IPv4 addresses found on interface.")
+
+    if args.mask_only:
+        print mask
+    else:
+        if args.mask:
+            print "%s/%s" % ( ip, mask, )
+        else:
+            print ip
+main()    
