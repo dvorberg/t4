@@ -160,6 +160,11 @@ class dbobject(object):
        stored in. Defaults to the class' name. May be set to a string or an
        sql.relation instance.
 
+    @cvat __view__: If given, this relation (in practice a view, not a
+       regular relation) is used to select() and count() instances of
+       this dbclass from. It defaults to the __relation__. Using this you
+       can achieve the effect of an “updateable view” on the Python side. 
+    
     @cvar __schema__: String containing the name of the schema this dbclass'
       relatin resides in.    
     """
@@ -188,10 +193,27 @@ class dbobject(object):
                 elif isinstance(ret.__relation__, sql.relation):
                     pass
                 else:
-                    msg = "Relation name must be a string or an" + \
+                    msg = "Relation name must be a string or an " + \
                           "sql.relation() instance, not %s (%s)"
                     raise TypeError(msg % ( repr(type(ret.__relation__)),
                                             repr(ret.__relation__),) )
+
+                if not hasattr(ret, "__view__") or \
+                       getattr(ret.__view__, "__autocreated__", False):
+                    ret.__view__ = ret.__relation__
+                elif type(ret.__view__) == StringType:
+                    schema = getattr(ret, "__schema__", None)
+                    ret.__view__ = sql.relation(ret.__view__, schema)
+                elif type(ret.__view__) == UnicodeType:
+                    raise TypeError("Unicode is not allowed as SQL identifyer")
+                elif isinstance(ret.__view__, sql.relation):
+                    pass
+                else:
+                    msg = ("Relation name for the __view__ "
+                           "must be a string or an "
+                           "sql.relation() instance, not %s (%s)")
+                    raise TypeError(msg % ( repr(type(ret.__view__)),
+                                            repr(ret.__view__),) )
 
                 # Initialize the dbproperties                
                 for attr_name, property in dict.items():
