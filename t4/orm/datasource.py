@@ -296,9 +296,7 @@ class datasource_base:
         @param clauses: A list of t4.orm.sql clauses instances (or
                         equivalent Python object i.e. strings) that
                         are added to the sql.select query.  See
-                        t4.orm.sql.select for details
-
-        
+                        t4.orm.sql.select for details        
         """
         from dbobject import dbobject
 
@@ -321,7 +319,7 @@ class datasource_base:
                     True)
                 
         query = sql.select(dbclass.__select_expressions__(full_column_names),
-                           dbclass.__relation__, *clauses)
+                           dbclass.__view__, *clauses)
         
         return self.run_select(dbclass, query)
 
@@ -367,7 +365,7 @@ class datasource_base:
                                          isinstance(clause, sql.left_join)),
                          clauses)
             
-        query = sql.select("COUNT(*)", dbclass.__relation__, *clauses)
+        query = sql.select("COUNT(*)", dbclass.__view__, *clauses)
         return self.query_one(query)[0]
 
     def join_select(self, dbclass, *clauses):
