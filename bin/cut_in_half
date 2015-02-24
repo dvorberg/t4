@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+# -*- coding: utf-8; -*-
+
+import sys, os, os.path as op
+from PIL import Image
+
+def cut_in_half(fn):
+    name, ext = op.splitext(fn)
+
+    img = Image.open(fn)
+    w, h = img.size
+
+    leftimg = img.crop( (0, 0, w/2, h,) )
+    leftimg.save(name + "_left" + ext, img.format)
+    
+    rightimg = img.crop( (w/2, 0, w, h,) )
+    rightimg.save(name + "_right" + ext, img.format)
+
+def main():
+    for fn in sys.argv[1:]:
+        cut_in_half(fn)
+
+
+main()    
