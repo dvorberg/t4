@@ -201,6 +201,7 @@ class dbobject(object):
                 if not hasattr(ret, "__view__") or \
                        getattr(ret.__view__, "__autocreated__", False):
                     ret.__view__ = ret.__relation__
+                    ret.__view__.__autocreated__ = True
                 elif type(ret.__view__) == StringType:
                     schema = getattr(ret, "__schema__", None)
                     ret.__view__ = sql.relation(ret.__view__, schema)
