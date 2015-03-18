@@ -1,24 +1,45 @@
 #!/usr/bin/env python
 # -*- coding: utf-8; -*-
 
-import sys, os, os.path as op
+import sys, os, os.path as op, argparse
 from PIL import Image
 
-def cut_in_half(fn):
+def cut_in_half(fn, outdir, prefix):
     name, ext = op.splitext(fn)
 
+    def outpath(side):        
+        if prefix != "" and not prefix.endswith("_"):
+            p = prefix + "_"
+        else:
+            p = prefix
+        
+        fn = "%s%s_%s%s" % (p, name, side, ext,)
+        return op.join(outdir, fn)
+    
     img = Image.open(fn)
     w, h = img.size
 
     leftimg = img.crop( (0, 0, w/2, h,) )
-    leftimg.save(name + "_left" + ext, img.format)
+    leftimg.save(outpath("left"), img.format)
     
     rightimg = img.crop( (w/2, 0, w, h,) )
-    rightimg.save(name + "_right" + ext, img.format)
+    rightimg.save(outpath("right"), img.format)
 
 def main():
-    for fn in sys.argv[1:]:
-        cut_in_half(fn)
+    ap = argparse.ArgumentParser(description="Cut bitmap images in half "
+                                 "vertically and create a set of left and "
+                                 "right images for each input image.")
+    ap.add_argument("-o", dest="outdir", help="Output directory",
+                    default=".")
+    ap.add_argument("-p", dest="prefix", help="Output file prefix",
+                    default="cut")
+
+    ap.add_argument(metavar="input file", dest="input_files", nargs="+")
+
+    args = ap.parse_args()
+    
+    for fn in args.input_files:
+        cut_in_half(fn, args.outdir, args.prefix)
 
 
 main()    
