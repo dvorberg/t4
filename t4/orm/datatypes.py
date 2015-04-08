@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2014 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002–2015 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -38,7 +38,7 @@ Datatype classes for the default SQL datatypes.
   
 """
 # Python
-import sys, copy, cPickle
+import sys, copy, cPickle, decimal as pydecimal
 from types import *
 from string import *
 from datetime import time as py_time
@@ -254,7 +254,7 @@ class datatype(property):
         from the database.
         """
         if full_column_names:
-            return sql.column(self.column.name(), dbclass.__relation__,
+            return sql.column(self.column.name(), dbclass.__view__,
                               self.column.quote())
         else:
             return self.column
@@ -329,6 +329,15 @@ class Float(datatype):
     sql_literal_class = sql.float_literal
 
 real = Float
+
+class number(datatype):
+    """
+    dbclass property for FLOAT and DOUBLE (etc) SQL columns.
+    """    
+    python_class = pydecimal.Decimal
+    sql_literal_class = sql.decimal_literal
+
+decimal = number
 
 class string(datatype):
     """
@@ -666,7 +675,7 @@ class delayed(wrapper):
             return getattr(dbobj, self.data_attribute_name())
         else:
             query = sql.select(( self.column, ),
-                               dbobj.__relation__,
+                               dbobj.__view__,
                                dbobj.__primary_key__.where())
             cursor = dbobj.__ds__().execute(query)
             row = cursor.fetchone()
@@ -782,8 +791,8 @@ class expression(wrapper):
         exp.append(self.column)
 
         # Perform template substitution
-        info = { "$relation": str(dbclass.__relation__),
-                 "$table": str(dbclass.__relation__),
+        info = { "$relation": str(dbclass.__view__),
+                 "$table": str(dbclass.__view__),
                  "$attribute": attribute_name }
         
         for key, value in info.items():
@@ -986,7 +995,56 @@ class property_group(datatype):
 
             property = self.parent.inside_dbproperties()[key]
             property.__set__(self.dbobj, value)
+
+
+class dict_to_object(wrapper):
+    """
+    For datatypes that return Python dictionaries, this will turn
+    the dictionary into an object, mapping keys to property names.
+    This has been written specifically for PostgreSQL’s JSON columns.
+    """
+    class former_dict:
+        # To make these useable in Zope
+        __allow_access_to_unprotected_subobjects__ = True
+
+        def __init__(self, dict):
+            self.__dict__.update(dict)
+
+    def __get__(self, dbobj, owner="I still don't know what this does"):
+        value = self.inside_datatype.__get__(dbobj, owner)
+
+        if value is None:
+            return None
+        else:
+            if type(value) == DictType:
+                return self.former_dict(value)
+            else:
+                raise TypeError()
+
+    def __set__(self, dbobj, value):
+        # This may or may not work for your purposes. 
+        self.inside_datatype.__set__(dbobj, value)
             
+
+class dictlist_to_objectlist(dict_to_object):
+    """
+    Much like dict_to_object above, this is for results returned from the
+    database as JSON lists of objects.
+    """
+    def __get__(self, dbobj, owner="I still don't know what this does"):
+        value = self.inside_datatype.__get__(dbobj, owner)
+
+        if value is None:
+            return []
+        else:
+            if type(value) == ListType:
+                return map(dict_to_object.former_dict, value)
+            else:
+                raise TypeError()
+
+    def __set__(self, dbobj, value):
+        # This may or may not work for your purposes. 
+        self.inside_datatype.__set__(dbobj, value)
 
 class PDomain(Unicode):
     """
