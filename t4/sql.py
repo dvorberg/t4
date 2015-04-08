@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002–2015 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -55,7 +55,7 @@ The way it works is best described by example::
 """
 __author__ = "Diedrich Vorberg <diedrich@tux4web.de>"
 
-import json
+import json, decimal
 from string import *
 from types import *
 
@@ -316,6 +316,14 @@ class float_literal(literal):
             raise TypeError(
                 "float_literal takes an float as argument, not a " + \
                     repr(type(i)))
+        self._sql = str(i)
+
+class decimal_literal(literal):
+    def __init__(self, i):
+        if not isinstance(i, decimal.Decimal):
+            raise TypeError(
+                "decimal_literal takes a decimal.Decimal "
+                "instance as argument, not a " + repr(type(i)))
         self._sql = str(i)
 
 class string_literal(literal):
