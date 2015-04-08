@@ -45,6 +45,11 @@ def set_url_param(url, params={}):
         if len(value) == 1:
             query[key] = value[0]
     query.update(params)
+    
+    for key, value in params.items():
+        if value is None:
+            del query[key]
+            
     return "%s://%s%s?%s" % (url.scheme, url.netloc, url.path,
                              urllib.urlencode(query),)
 
