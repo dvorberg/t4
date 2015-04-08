@@ -27,7 +27,7 @@
 
 
 # Python
-import os, sys, re, cgi
+import os, sys, re, cgi, decimal
 from string import *
 from types import *
 
@@ -176,6 +176,9 @@ def german_float(s):
     Parse a string containing a German float-point number (.s separate
     1000s, and decimal comma) into a float.
     """
+    if type(s) == FloatType:
+        return s
+        
     # Replace , with .
     s = s.replace(",", ".")
 
@@ -185,6 +188,24 @@ def german_float(s):
         s = ".".join(parts[:-1]) + "." + parts[-1]
         
     return float(s)
+
+def german_decimal(s):
+    """
+    Parse a string containing a German float-point number (.s separate
+    1000s, and decimal comma) into a float.
+    """
+    # Replace , with .
+    s = s.replace(",", ".")
+
+    # Remove all .s except the last one.
+    parts = s.split(".")
+    if len(parts) > 2:
+        s = ".".join(parts[:-1]) + "." + parts[-1]
+
+    try:
+        return decimal.Decimal(s)
+    except decimal.InvalidOperation:
+        raise ValueError()
 
 def pretty_german_float(f, decimals=2):
     """
