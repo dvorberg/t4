@@ -68,9 +68,6 @@ class result:
         self.ds = ds
         self.dbclass = dbclass
 
-        if not isinstance(select, sql.select):
-            raise TypeError("result can only work on sql.select instances!")
-
         self.select = select
         
         self.columns = dbclass.__select_expressions__(True)
@@ -121,6 +118,10 @@ class result:
         This can't be called __len__(), because then it is used by
         list() and yields a superflous SELECT query.
         """
+        if not isinstance(select, sql.select):
+            raise TypeError("result.count() can only work if the select was a"
+                            "sql.select instance!")
+
         count_select = copy.deepcopy(self.select)
         count_select.clauses = \
                 filter(lambda clause: isinstance(clause, sql.where),
