@@ -337,6 +337,12 @@ class textbox(canvas):
                 paragraphs.insert(0, paragraph)
                 return paragraphs
 
+            if len(paragraphs) > 0:
+                try:
+                    self.newline()
+                except EndOfBox:
+                    return paragraphs
+
         return []
 
     def typeset_paragraph(self, paragraph, hyphenator):
@@ -406,7 +412,7 @@ class textbox(canvas):
 
                                             # render the remainder of
                                             # the word, overlapping our
-                                            # right morder if it so be.
+                                            # right border if it so be.
                                             line = [ (w, ww,) ]
                                             self.typeset_line(line)
                                         except EndOfBox:
@@ -449,7 +455,11 @@ class textbox(canvas):
         if len(line) != 0:
             self.typeset_line(line, True)
 
-        self.advance(self.paragraph_spacing)
+        try:
+            self.advance(self.paragraph_spacing)
+        except EndOfBox:
+            pass
+            
         return []
         
     def word_width(self, word):
