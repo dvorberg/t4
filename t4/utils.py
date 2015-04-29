@@ -30,7 +30,7 @@ from random import random
 from string import *
 from types import *
 
-password_specials = "+-/*!&#;$,@"
+password_specials = "+-/*!&;$,@"
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
     digits = "0123456789"
