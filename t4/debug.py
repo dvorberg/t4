@@ -159,8 +159,8 @@ class _log(logstream):
                                  callback=self._make_verbose,
                                  help="Be verbose (to stderr)")
     def add_argument(self, argument_parser, short="-v", long="--verbose", ):
-        argument_parser.add_option([short, long,], type=self._make_verbose,
-                                   metavar="", help="Be verbose (to stderr)")
+        argument_parser.add_argument([short, long,], type=self._make_verbose,
+                                     metavar="", help="Be verbose (to stderr)")
                                      
         
 class _debug(logstream):
@@ -170,9 +170,9 @@ class _debug(logstream):
                                  help="Print debug messages (to stderr)")
         
     def add_argument(self, argument_parser, short="-d", long="--debug", ):
-        argument_parser.add_option([short, long,], type=self._make_verbose,
-                                   metavar="", 
-                                   help="Print debug messages (to stderr)")
+        argument_parser.add_argument([short, long,], type=self._make_verbose,
+                                     metavar="", 
+                                     help="Print debug messages (to stderr)")
         
 class _sql(logstream):
     """
