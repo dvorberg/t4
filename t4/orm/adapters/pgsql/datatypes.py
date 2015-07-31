@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002-2006 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002–2015 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -38,13 +38,16 @@ from uuid import UUID
 # orm
 from t4 import sql
 from t4.orm.datatypes import *
-from t4.orm.exceptions import ObjectAlreadyInserted
+from t4.orm.exceptions import ORMException, ObjectAlreadyInserted
 from t4.validators import ip_address_validator
 
 from datasource import psycopg2_version
 
 # Some regular expressions that may come in handy
 point_re = re.compile(r"\(?\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)?")
+
+class SerialNotMutableException(ORMException):
+    pass
 
 class serial(integer):
     """
@@ -74,8 +77,9 @@ class serial(integer):
 
     def __set__(self, dbobj, value):
         if self.isset(dbobj):
-            raise ORMException( "A serial property is not mutable, " + \
-                                "once it is set on object creation" )
+            raise SerialNotMutableException("A serial property is not "
+                                            "mutable once it is set on object "
+                                            "creation." )
         else:
             integer.__set__(self, dbobj, value)
     
