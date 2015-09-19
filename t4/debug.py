@@ -151,7 +151,22 @@ class tee(logstream):
                 
         object.__setattr__(self, name, value)
         
-        
+
+class recording_logstream(logstream):
+    def __init__(self, verbose=False, outfile=sys.stderr):
+        logstream.__init__(self)        
+        self.verbose = False
+        self.fp = outfile
+
+        self._record = []
+
+    def write(self, s):
+        self._record.append(s)
+        logstram.write(self, s)
+
+    def write_to(self, fp):
+        for entry in self._record:
+            fp.write(entry)
         
 class _log(logstream):
     def add_option(self, option_parser, short="-v", long="--verbose", ):
