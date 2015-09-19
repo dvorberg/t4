@@ -189,6 +189,16 @@ def german_float(s):
         
     return float(s)
 
+def german_integer(s):
+    if type(s) == types.IntType:
+        return s
+    else:
+        s = str(s)
+        s = s.replace(".", "")
+        return int(s)
+
+german_int = german_integer        
+    
 def german_decimal(s):
     """
     Parse a string containing a German float-point number (.s separate
@@ -206,7 +216,7 @@ def german_decimal(s):
         return decimal.Decimal(s)
     except decimal.InvalidOperation:
         raise ValueError()
-
+        
 def pretty_german_float(f, decimals=2):
     """
     Return a German representation of a float point number as a
