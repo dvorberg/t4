@@ -190,7 +190,7 @@ def german_float(s):
     return float(s)
 
 def german_integer(s):
-    if type(s) == types.IntType:
+    if type(s) == IntType:
         return s
     else:
         s = str(s)
