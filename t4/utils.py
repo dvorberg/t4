@@ -25,28 +25,40 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os, os.path as op, types, subprocess, threading
-from random import random
+import sys, os, os.path as op, types, subprocess, threading, random, itertools
 from string import *
 from types import *
+
+def apple_style_random_password(groupnum=4, grouplength=3):
+    letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
+    digits = "0123456789"
+    characters = letters + digits
+
+    def groups():
+        while True:
+            yield join(random.sample(characters, grouplength), "")
+
+    groups = itertools.islice(groups(), groupnum)
+    return join(groups, "-")
+    
 
 password_specials = "+-/*!&;$,@"
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
     digits = "0123456789"
-    letters_and_digits = letters + digits
+    characters = letters + digits
 
     ret = []
-    ret.append(letters[int(random() * len(letters))])
+    ret.append(random.choice(letters))
     for a in range(length-1):
-        ret.append(letters_and_digits[int(random() * len(letters_and_digits))])
+        ret.append(random.choice(characters))
 
-    if use_specials:
-        for a in ( digits, password_specials, ):
-            idx = int(random() * (len(ret)-1)) + 1
-            ret.insert(idx, a[int(random() * len(a))])
 
-    if len(ret) > length: ret = ret[:length]
+    if use_specials and length > 2:
+        ret = ret[:-1]
+        idx = random.randint(1, length-2)
+        ret.insert(idx, random.choice(password_specials))
+            
     return join(ret, "")
 
 def password_good_enough(password):
