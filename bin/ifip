@@ -36,13 +36,13 @@ def main():
             
     if args.ipv6:
         if ip6 is None:
-            args.error("No IPv6 addresses found on interface.")
+            ap.error("No IPv6 addresses found on interface.")
             
         ip = ip6
         mask = mask6
     else:
         if ip is None:
-            args.error("No IPv4 addresses found on interface.")
+            ap.error("No IPv4 addresses found on interface.")
 
     if args.mask_only:
         print mask
