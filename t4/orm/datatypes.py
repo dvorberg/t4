@@ -712,6 +712,14 @@ class delayed(wrapper):
     def __copy__(self):
         return delayed(copy.copy(self.inside_datatype), self.cache)
 
+class readonly(wrapper):
+    """
+    This marks a dbproperty as readonly. A TypeError will be raised on
+    attempts to set the property to a value.
+    """
+    def __set__(self, dbobj, value):
+        raise TypeError("Tried to set a read-only dbproperty.")
+        
 class csv(wrapper):
     """
     csv stands for 'comma separated values'. This wrapper takes a
@@ -743,7 +751,7 @@ class csv(wrapper):
     def __copy__(self):
         return csv(copy.copy(self.inside_datatype), self.separator)
         
-class expression(wrapper):
+class expression(readonly):
     """
     Insert an arbitrary SQL expression into the SQL query.
 
