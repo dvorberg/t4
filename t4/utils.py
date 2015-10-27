@@ -308,7 +308,7 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     @returns: A pair as: The return value from subprocess.communicate() ( 
        a tuple) of various contents and and the (integer) exit code of the
-       subprocess. Usage: ((stdin, stdout), retval) = run_with_timeout(…)
+       subprocess. Usage: ((stdout, stderr), retval) = run_with_timeout(…)
 
     @raises: IOError if the timeout is exceed.
     """
