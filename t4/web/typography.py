@@ -38,9 +38,9 @@ def html_quote(content, lang="de"):
     return content
 
 opening_quote_re = re.compile(r'(\s+|^)"([0-9a-zA-Z])')
-closing_quote_re = re.compile(r'([^ ]")"(\s+|$)')
+closing_quote_re = re.compile(r'(\S+)"(\s+|$|[,\.;!])')
 opening_single_quote_re = re.compile(r"(\s+|^)'([0-9a-zA-Z])")
-closing_single_quote_re = re.compile(r"([^ '])'(\s+|$)")
+closing_single_quote_re = re.compile(r"(\S+)'(\s+|$|[,\.;!])")
 date_until_re = re.compile(r'(\d+)\.-(\d+)\.')
 
 def improve_typography(content, lang="de"):
