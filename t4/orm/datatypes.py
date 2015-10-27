@@ -632,8 +632,7 @@ class wrapper(datatype):
             return _inside_method(self, wrapper.__dict__[name])
         
         elif hasattr(inside_datatype, name):
-            return getattr(self.inside_datatype, name)
-        
+            return getattr(self.inside_datatype, name)        
         else:
             raise AttributeError(name)
 
@@ -717,9 +716,15 @@ class readonly(wrapper):
     This marks a dbproperty as readonly. A TypeError will be raised on
     attempts to set the property to a value.
     """
+    def __get__(self, dbobj, owner="dummy"):
+        return self.inside_datatype.__get__(dbobj, owner)
+        
     def __set__(self, dbobj, value):
         raise TypeError("Tried to set a read-only dbproperty.")
         
+    def __copy__(self):
+        return readonly(copy.copy(self.inside_datatype))
+
 class csv(wrapper):
     """
     csv stands for 'comma separated values'. This wrapper takes a
