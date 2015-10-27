@@ -214,7 +214,7 @@ class one2many(_2many):
                     info = repr(tuple(dbobj.__primary_key__.attribute_names()))
                     SimplePrimaryKeyNeeded(msg % info)
                     
-                child_key = "%s_%s" % ( dbobj.__relation__.name(True),
+                child_key = "%s_%s" % ( dbobj.__view__.name(True),
                                         pkey_column.name(True), )
                 
             else:
@@ -336,7 +336,7 @@ class many2many(_2many):
             FOREIGN KEY constraints on the link relation.
             """
             relations = ( self.relationship.link_relation,
-                          self.child_class().__relation__, )
+                          self.child_class().__view__, )
 
             clauses = self.add_where(clauses)
 
@@ -359,7 +359,7 @@ class many2many(_2many):
             
             query = sql.select("COUNT(*)",
                                ( self.relationship.link_relation,
-                                 self.child_class().__relation__, ),
+                                 self.child_class().__view__, ),
                                *clauses)
             
             len, = self.ds().query_one(query)
@@ -379,7 +379,7 @@ class many2many(_2many):
 
             join_where = sql.where(
                 sql.column(self.child_class().__primary_key__,
-                           self.child_class().__relation__),
+                           self.child_class().__view__),
                 " = ",
                 sql.column(self.relationship.child_link_column(),
                            self.relationship.link_relation))
@@ -405,7 +405,7 @@ class many2many(_2many):
             """
             if self.dbobj.__is_stored__():
                 relations = ( self.relationship.link_relation,
-                              self.child_class().__relation__, ) 
+                              self.child_class().__view__, ) 
                 join_clauses = self.add_where(clauses)
                 
                 child_pkey = keys.primary_key(self.child_class())
