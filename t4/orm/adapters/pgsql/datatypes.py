@@ -322,6 +322,14 @@ class json(datatype):
         """
         return value
 
+    def __set__(self, dbobj, value):
+        """
+        We register every change, because the == operator used by
+        datatype.__set__ to detect a modification may not work on the
+        complex datastructure the JSON contains.
+        """
+        datatype.__set__(self, dbobj, value)
+        dbobj.__register_change__(self)
     
 class jsonb(json):
     """
