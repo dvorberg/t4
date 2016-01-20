@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2011–15 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -114,7 +114,10 @@ def pretty_money(m, form=False):
         try:
             m = german_float(m)
         except ValueError:
-            return m
+            if form:
+                return m
+            else:
+                raise
     
     if m is None:
         return ""
@@ -176,16 +179,14 @@ def german_float(s):
     Parse a string containing a German float-point number (.s separate
     1000s, and decimal comma) into a float.
     """
-    if type(s) == FloatType:
-        return s
-        
-    # Replace , with .
-    s = s.replace(",", ".")
+    if type(s) in ( StringType, UnicodeType,):
+        # Replace , with .
+        s = s.replace(",", ".")
 
-    # Remove all .s except the last one.
-    parts = s.split(".")
-    if len(parts) > 2:
-        s = ".".join(parts[:-1]) + "." + parts[-1]
+        # Remove all .s except the last one.
+        parts = s.split(".")
+        if len(parts) > 2:
+            s = ".".join(parts[:-1]) + "." + parts[-1]
         
     return float(s)
 
@@ -217,15 +218,19 @@ def german_decimal(s):
     except decimal.InvalidOperation:
         raise ValueError()
         
-def pretty_german_float(f, decimals=2):
+def pretty_german_float(f, decimals=2, form=False):
     """
     Return a German representation of a float point number as a
-    string. If passed a string as first paramter, return it verbatin.
+    string. 
     """
-    if type(f) == StringType:
-        return f
-    if f is None:
-        return ""
+    if type(f) != FloatType and not isinstance(f, decimal.Decimal):
+        if form:
+            if f is None:
+                return ""
+            else:
+                f = german_float(f)
+        else:
+            raise TypeError
         
     # f = float(f) Don’t do that. If this is a decimal.Decimal, we’d loose
     # precision!
@@ -252,7 +257,16 @@ def pretty_german_float(f, decimals=2):
     else:
         return s
 
-def pretty_german_integer(i):    
+def pretty_german_integer(i, form=False):
+    if type(f) != IntType and not isinstance(f, decimal.Decimal):
+        if form:
+            if f is None:
+                return ""
+            else:
+                f = german_integer(f)
+        else:
+            raise TypeError
+    
     s = str(i)
     ret = ""
     while len(s) > 3:
