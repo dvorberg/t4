@@ -85,11 +85,11 @@ class combined_style(object):
         if self._name:
             return self._name
         else:
-            return "+".join(map(lambda style: getattr(style, "name",
-                                                      repr(style)),
+            return "+".join(map(lambda style: getattr(style, "name"),
                                 reversed(self._styles)))
 
     def set_name(self, name):
+        assert type(name) == types.StringType, TypeError
         self._name = name
         
     def __setitem__(self, name, value):
@@ -187,6 +187,7 @@ class mutable_cascading_style(name_mangling_dict):
         if name is None:
             self._name = self.__class__.__name__
         else:
+            assert type(name) == types.StringType, TypeError
             self._name = name
 
         if parent:
@@ -202,6 +203,7 @@ class mutable_cascading_style(name_mangling_dict):
         return self._name
 
     def set_name(self, name):
+        assert type(name) == types.StringType, TypeError
         self._name = name
         
     def __add__(self, other):
