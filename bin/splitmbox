@@ -1,0 +1,17 @@
+#!/usr/bin/python
+import sys, os, os.path as op, re, mailbox, time
+from string import *
+
+def main():
+    hostname = strip(os.popen("hostname", "r").read())    
+    box = mailbox.mbox(sys.argv[1])
+
+    for key in box.keys():
+        msg = box.get_string(key)
+
+        fn = "%f.splitmbox.%s.msg" % ( time.time(), hostname, )
+        with open(fn, "w") as fp:
+            fp.write(msg)
+
+    
+main()
