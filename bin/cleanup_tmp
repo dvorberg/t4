@@ -30,17 +30,11 @@ def main():
         path = op.join(tmpdir, fn)
 
         if not path in open_files:
-            info = os.stat(path)
-            if now - info.st_atime > 24*3600:
-                try:
+            try:
+                info = os.stat(path)
+                if now - info.st_atime > 24*3600:
                     os.unlink(path)
-                except OSError:
-                    pass
-                #print path
-            #else:
-            #    print "Too young:", path
-        #else:
-        #    print "Open:", path
-
+            except OSError:
+                pass            
         
 main()    
