@@ -261,11 +261,7 @@ def pretty_german_float(f, decimals=2, form=False):
         return s
 
 def pretty_german_integer(i, form=False):
-<<<<<<< HEAD
     if not type(i) in (IntType, LongType,) and not isinstance(i, decimal.Decimal):
-=======
-    if type(i) != IntType and not isinstance(i, decimal.Decimal):
->>>>>>> 3c894b9d4b73e51bda1979b3d324d587557999b4
         if form:
             if i is None:
                 return ""
