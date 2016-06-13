@@ -40,7 +40,7 @@ def html_quote(content, lang="de"):
 opening_quote_re = re.compile(r'(\s+|^)"([0-9a-zA-Z])')
 closing_quote_re = re.compile(r'(\S+)"(\s+|$|[,\.;!])')
 opening_single_quote_re = re.compile(r"(\s+|^)'([0-9a-zA-Z])")
-closing_single_quote_re = re.compile(r"(\S+)'(\s+|$|[,\.;!])")
+closing_single_quote_re = re.compile(r"([^\s']+)'(\s+|$|[,\.;!])")
 date_until_re = re.compile(r'(\d+)\.-(\d+)\.')
 
 def improve_typography(content, lang="de"):
@@ -109,7 +109,7 @@ def improve_typography_unicode(content, lang):
     
     return content
 
-def pretty_money(m, form=False):
+def pretty_money(m, form=True):
     if type(m) in (StringType, UnicodeType,):
         try:
             m = german_float(m)
@@ -228,7 +228,10 @@ def pretty_german_float(f, decimals=2, form=False):
             if f is None:
                 return ""
             else:
-                f = german_float(f)
+                try:
+                    f = german_float(f)
+                except ValueError:
+                    return f
         else:
             raise TypeError
         
@@ -258,7 +261,11 @@ def pretty_german_float(f, decimals=2, form=False):
         return s
 
 def pretty_german_integer(i, form=False):
+<<<<<<< HEAD
     if not type(i) in (IntType, LongType,) and not isinstance(i, decimal.Decimal):
+=======
+    if type(i) != IntType and not isinstance(i, decimal.Decimal):
+>>>>>>> 3c894b9d4b73e51bda1979b3d324d587557999b4
         if form:
             if i is None:
                 return ""

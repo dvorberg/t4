@@ -198,7 +198,7 @@ class gs(interpreter):
                     except FileNotFoundError:
                         msg = "Ignoring %s, because %s does not exist"
                         msg = msg % ( repr(fontname), repr(filename), )
-                        #warnings.warn(msg)
+                        warnings.warn(msg)
                         # Ignore font files that do not exist just like gs
                         # does
                         continue

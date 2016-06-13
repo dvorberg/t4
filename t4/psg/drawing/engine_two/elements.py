@@ -146,8 +146,6 @@ class _node(list):
         return self.__class__.__name__ + " " + self._style_info()
             
     def __print__(self, indentation=0):
-        print indentation * "  ", repr(self)
-            
         for child in self:
             child.__print__(indentation+1)
             
@@ -376,7 +374,7 @@ class paragraph(_node):
                         idx -= 1
 
                     break
-                    
+            
             self.last_word_idx = idx
             self.last = ( idx == len(self.paragraph)-1 and \
                           self.hyphenation_remainder is None)

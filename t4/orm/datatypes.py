@@ -1279,3 +1279,18 @@ class enum(string):
                 
         datatype.__set__(self, dbobj, value)
 
+class dependend_dict(dict):
+    """
+    A dict that will register a change for a dbproperty with a dbobject
+    on each modification.
+    """
+    def __init__(self, dbobject, dbproperty, data):
+        self.dbobject = dbobject
+        self.dbproperty = dbproperty
+        
+        dict.__init__(data)
+
+    def __setkey__(self, name, value):
+        dict.__setkey__(self, name, value)
+        self.dbobject.__register_change__(self.dbproperty)
+        
