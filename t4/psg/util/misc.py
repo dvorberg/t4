@@ -182,7 +182,7 @@ def ps_escape(s, always_parenthesis=True):
 
     @param always_parenthesis: If set, the returned literal will always
       have ()s around it. If it is not set, this will only happen, if
-      a 's' contains a space.
+      “s” contains a space char.
     """
     if not  always_parenthesis and " " in s:
         always_parenthesis = True
