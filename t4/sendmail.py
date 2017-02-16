@@ -43,7 +43,8 @@ from email.header import Header
 
 
 class sendmail_attachment:
-    def __init__(self, filename, data, mime_type=None):
+    def __init__(self, filename, data, mime_type=None,
+                 content_disposition="attachment", headers={}):
         self.filename = filename
         self.data = data
 
@@ -70,9 +71,12 @@ class sendmail_attachment:
             encoders.encode_base64(msg)
             
         # Set the filename parameter
-        msg.add_header("Content-Disposition", "attachment",
+        msg.add_header("Content-Disposition", content_disposition,
                        filename=self.filename)
 
+        for key, value in headers.items():
+            msg.add_header(key, value)
+        
         return msg
 
     

@@ -79,21 +79,7 @@ class box:
         @param clip: Boolean indicating whether the bounding box shall
            establish a clipping path around its bounding box.
         """
-        if parent is None:
-            self.page = None
-            self.document = None
-        elif isinstance(parent, (box, canvas,)):
-            self.page = parent.page
-            self.document = parent.document
-        elif isinstance(parent, document.page):
-            self.page = parent
-            self.document = parent.document
-        elif isinstance(parent, document.document):
-            self.page = None
-            self.document = parent
-        else:
-            raise ValueError("parent= must be page or box object.")
-            
+        self.parent = parent
         self._w = float(w)
         self._h = float(h)
         self._x = float(x)
@@ -117,8 +103,7 @@ class box:
         if clip:
             self.print_bounding_path()
             print >> self.head, "clip"
-            
-
+        
     def from_bounding_box(cls, parent, bb, border=False, clip=False):
         """
         Initialize a box from its bounding box.
@@ -138,6 +123,30 @@ class box:
         return cls(parent, x - w/2.0, y - h/2.0, w, h, border, clip)
     from_center = classmethod(from_center)
 
+
+    def get_parent(self):
+        return self._parent
+        
+    def set_parent(self, parent):
+        if parent is None:
+            self.page = None
+            self.document = None
+        elif isinstance(parent, (box, canvas,)):
+            self.page = parent.page
+            self.document = parent.document
+        elif isinstance(parent, document.page):
+            self.page = parent
+            self.document = parent.document
+        elif isinstance(parent, document.document):
+            self.page = None
+            self.document = parent
+        else:
+            raise ValueError("parent= must be a page, a box object or None.")
+            
+        self._parent = parent
+
+    parent = property(get_parent, set_parent)
+    
     def x(self): return self._x
     def y(self): return self._y
     def w(self): return self._w
