@@ -336,13 +336,12 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     thread = threading.Thread(target=target)
     thread.pipe = pipe
-
+    
     thread.start()
-
     thread.join(timeout)
 
     if thread.is_alive():
-        thread.pipe.terminate()
+        thread.pipe.kill()
         thread.join()
         raise IOError("Subprocess timeout.")
 
