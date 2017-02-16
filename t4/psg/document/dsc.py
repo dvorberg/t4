@@ -1343,15 +1343,11 @@ class dsc_document(document_section, document):
             
 
 class dsc_page(page, page_section):
-    def __init__(self, document, page_size="a4", label=None):
-        page.__init__(self, document, page_size, label)
+    def __init__(self, document, page_size="a4", label=None, ordinal=None):
+        page.__init__(self, document, page_size, label, ordinal)
 
-        ordinal = document.page_counter() 
-        if label is None: label = str(ordinal)
-        info = "%s %i" % ( ps_escape(label), ordinal)
+        info = "%s %i" % ( ps_escape(self.label), self.ordinal)
         page_section.__init__(self, info=info)
-
-        self.ordinal = ordinal
 
         self.append(pagesetup_section())
         self.trailer = pagetrailer_section()
