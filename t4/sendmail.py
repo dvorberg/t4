@@ -85,8 +85,8 @@ class sendmail_attachment:
     
 def sendmail(from_name, from_email,
              to_name, to_email,
-             subject, message, attachments=[], headers={}, bcc=[],
-             text_subtype="plain", encoding="utf-8"):
+             subject, message, attachments=[], headers={}, bcc=[],             
+             text_subtype="plain", encoding="utf-8", multipart_subtype="mixed"):
 
     if type(from_name) != types.UnicodeType: from_name = unicode(from_name)
     if type(to_name) != types.UnicodeType: to_name = unicode(to_name)
@@ -107,7 +107,7 @@ def sendmail(from_name, from_email,
     if len(attachments) == 0:
         outer = textpart
     else:
-        outer = MIMEMultipart()
+        outer = MIMEMultipart(multipart_subtype)
         outer.attach(textpart)
 
         
