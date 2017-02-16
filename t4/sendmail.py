@@ -54,6 +54,8 @@ class sendmail_attachment:
                 mime_type = "application/octet-stream"
                 
         self.mime_type = mime_type
+        self.content_disposition = content_disposition
+        self.headers = headers
 
     def part(self):
         maintype, subtype = self.mime_type.split("/", 1)
@@ -71,10 +73,11 @@ class sendmail_attachment:
             encoders.encode_base64(msg)
             
         # Set the filename parameter
-        msg.add_header("Content-Disposition", content_disposition,
+        msg.add_header("Content-Disposition",
+                       self.content_disposition,
                        filename=self.filename)
 
-        for key, value in headers.items():
+        for key, value in self.headers.items():
             msg.add_header(key, value)
         
         return msg
