@@ -79,7 +79,7 @@ class box:
         @param clip: Boolean indicating whether the bounding box shall
            establish a clipping path around its bounding box.
         """
-        self.parent = parent
+        self.set_parent(parent)
         self._w = float(w)
         self._h = float(h)
         self._x = float(x)
@@ -192,10 +192,11 @@ class box:
         the default) or page (document_level=False) using the page's
         add_resource function.
         """
-        if self.page:
-            self.page.add_resource(resource, document_level)
-        else:
+        if not self.page or document_level:
             self.document.add_resource(resource)
+        else:
+            self.page.add_resource(resource, document_level)
+            
 
     def write_to(self, fp):
         """
