@@ -151,16 +151,36 @@ class tee(logstream):
                 
         object.__setattr__(self, name, value)
         
+
+class recording_logstream(logstream):
+    def __init__(self, verbose=False, outfile=sys.stderr):
+        logstream.__init__(self)        
+        self.verbose = verbose
+        self.fp = outfile
+
+        self._record = []
+
+    def write(self, s):
+        self._record.append(s)
         
-        
+        if self.fp is not None:
+            logstream.write(self, s)
+
+    def write_to(self, fp):
+        for entry in self._record:
+            fp.write(entry)
+
+    def has_entries(self):
+        return len(self._record) > 0
+
 class _log(logstream):
     def add_option(self, option_parser, short="-v", long="--verbose", ):
         option_parser.add_option(short, long, action="callback",
                                  callback=self._make_verbose,
                                  help="Be verbose (to stderr)")
     def add_argument(self, argument_parser, short="-v", long="--verbose", ):
-        argument_parser.add_argument([short, long,], type=self._make_verbose,
-                                     metavar="", help="Be verbose (to stderr)")
+        argument_parser.add_argument(short, long, action="store_true",
+                                     dest="log", help="Be verbose (to stderr)")
                                      
         
 class _debug(logstream):
@@ -170,9 +190,9 @@ class _debug(logstream):
                                  help="Print debug messages (to stderr)")
         
     def add_argument(self, argument_parser, short="-d", long="--debug", ):
-        argument_parser.add_argument([short, long,], type=self._make_verbose,
-                                     metavar="", 
-                                     help="Print debug messages (to stderr)")
+        argument_parser.add_argument(short, long, action="store_true",
+                                     dest="debug",
+                                     help="Enable debug output (to stderr)")
         
 class _sql(logstream):
     """

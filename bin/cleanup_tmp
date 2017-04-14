@@ -1,0 +1,41 @@
+#!/usr/bin/python2.7
+# -*- mode: python; coding: utf-8; -*-
+
+import sys, os, os.path as op, subprocess, re, time
+from string import *
+
+tmpdir = "/tmp"
+filename_re = re.compile(r"^n(/tmp/\S+)$", re.MULTILINE)
+
+def main():
+    if os.getuid() != 0:
+        print >> sys.stderr, "Must be run as root."
+        sys.exit(1)
+        
+    if len(sys.argv) > 1:
+        print >> sys.stderr, "Usage: cleanup_tmp."
+        print >> sys.stderr, \
+            "This will delete all files form /tmp that are not currently open"
+        print >> sys.stderr, \
+            "and older than 24 hours."
+        sys.exit(1)
+
+    output = subprocess.check_output("lsof -n -P -w -Fn", shell=True)
+
+    open_files = set(map(op.abspath, map(lambda match: match.groups()[0],
+                                         filename_re.finditer(output))))
+
+    now = time.time()
+    for fn in os.listdir(tmpdir):
+        path = op.join(tmpdir, fn)
+
+        if not op.isdir(path) and not path in open_files:
+            try:
+                info = os.lstat(path)
+                if now - info.st_atime > 24*3600:
+                    os.unlink(path)
+            except OSError:
+                #raise
+                pass            
+        
+main()    

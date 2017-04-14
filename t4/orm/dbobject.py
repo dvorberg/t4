@@ -118,16 +118,18 @@ class result:
         This can't be called __len__(), because then it is used by
         list() and yields a superflous SELECT query.
         """
-        if not isinstance(select, sql.select):
+        if not isinstance(self.select, sql.select):
             raise TypeError("result.count() can only work if the select was a"
                             "sql.select instance!")
 
-        count_select = copy.deepcopy(self.select)
-        count_select.clauses = \
-                filter(lambda clause: isinstance(clause, sql.where),
-                       count_select.clauses)
-        count_select.columns = sql.expression("COUNT(*)")
-        return int(self.ds.query_one(count_select))
+        where = filter(lambda clause: isinstance(clause, (sql.where,
+                                                          sql.left_join)),
+                       self.select.clauses)
+        count_select = sql.select(sql.expression("COUNT(*)"),
+                                  self.select.relations,
+                                  *where)
+        count, = self.ds.query_one(count_select)
+        return count
 
     count_all = count
 

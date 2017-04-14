@@ -43,9 +43,14 @@ def words(text, style=None):
     if type(text) != types.UnicodeType:
         text = unicode(str(text))
 
+    words = splitfields(text)
+    
+    if len(words) == 0:
+        words = [u'\u200b',] # ZERO WIDTH SPACE
+        
     return map(lambda word: elements.word(elements.syllable(word),
                                           style=style),
-               splitfields(text))
+               words)
 
 def paragraph(text, style=None):
     """

@@ -3,7 +3,7 @@
 
 ##  This file is part of psg, PostScript Generator.
 ##
-##  Copyright 2014 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2014–17 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -46,6 +46,8 @@ import types, itertools, collections, unicodedata
 from string import *
 from t4.utils import here_and_next
 import t4.psg.drawing.box
+from t4.psg.exceptions import BoxTooSmall
+from t4.psg.util import ps_escape
 
 import styles
 
@@ -113,8 +115,8 @@ class _node(list):
 
     # Methods from the list class we need to overload.
     def _check_child(self, child):
-        raise NotImplemented("The _node class is an abstract base, don’t "
-                             "instantiate it at all.")
+        raise NotImplementedError("The _node class is an abstract base, don’t "
+                                  "instantiate it at all.")
         
     def append(self, child):
         if not isinstance(child, _node) and \
@@ -146,8 +148,6 @@ class _node(list):
         return self.__class__.__name__ + " " + self._style_info()
             
     def __print__(self, indentation=0):
-        print indentation * "  ", repr(self)
-            
         for child in self:
             child.__print__(indentation+1)
             
@@ -157,9 +157,8 @@ class _container_node(_node):
     A common base class for the richtext (=root node) and the box
     type.
     """
-    def render(self, canvas, cursor=None, y=None):
-        if y is None:
-            y = canvas.h()            
+    def render(self, canvas, cursor=None):
+        y = canvas.h()            
 
         # If the cursor is set and has an entry for this object,
         # the entry is the index of the last element that has not been
@@ -181,8 +180,7 @@ class _container_node(_node):
                 return y, cursor,
 
         return y, None,
-    
-            
+
 class richtext(_container_node):
     """
     This is the root node for a richtext tree.
@@ -194,21 +192,69 @@ class richtext(_container_node):
         _node.__init__(self, *children, **kw)
     
     def _check_child(self, child):
-        assert isinstance(child, box), TypeError(
-            "You can only add boxes to a richtext object.")
+        assert isinstance(child, (link, box)), TypeError(
+            "You can only add boxes and links to a richtext object.")
 
     @property
     def style(self):
         return self._style
 
-            
+class link(_container_node):
+    def __init__(self, uri, *children, **kw):
+        self.uri = uri
+        _container_node.__init__(self, *children, **kw)
 
+    def _check_child(self, child):
+        assert isinstance(child, box), TypeError(
+            "You can only add boxes to a link object.")        
+        
+    def render(self, canvas, cursor=None):
+        y, cursor = _container_node.render(self, canvas, cursor)
+        print >> canvas, "% elements.link.render() -start"
+        print >> canvas, "[ /Rect [%f %f %f %f]" % ( 0, canvas.h(),
+                                                     canvas.w(), y,)
+        print >> canvas, "  /Border [0 0 0]"
+        print >> canvas, "  /Color [0 0 0]"
+        print >> canvas, "  /Page 1"
+        print >> canvas, "  /Action <</Subtype /URI"
+        print >> canvas, "  /URI %s>>" % ps_escape(
+            self.uri, always_parenthesis=True)
+        print >> canvas, "  /Subtype /Link"
+        print >> canvas, "  /ANN pdfmark"
+        print >> canvas, "% elements.link.render() -end"
+
+        return y, cursor,
+
+class internal_link(link):
+    def __init__(self, page, *children, **kw):
+        self.page = page
+        _container_node.__init__(self, *children, **kw)
+
+    def render(self, canvas, cursor=None):
+        y, cursor = _container_node.render(self, canvas, cursor)
+        
+        print >> canvas, "% elements.internal_link.render() -start"
+        print >> canvas, "[ /Rect [%f %f %f %f]" % ( 0, canvas.h(),
+                                                     canvas.w(), y,)
+        print >> canvas, "  /Border [0 0 0]"
+        print >> canvas, "  /Color [0 0 0]"
+        print >> canvas, "  /Page", self.page.ordinal
+        print >> canvas, "  /View [ /XYZ null null null]"
+        print >> canvas, "  /Subtype /Link"
+        print >> canvas, "  /ANN pdfmark"
+        print >> canvas, "% elements.internal_link.render() -end"
+
+        return y, cursor,
+
+
+        
 class box(_container_node):
     """
-    This is a box with margin, padding and background.
+    This is a box with margin, padding and background. (line-) wrapping will be
+    performed for the contents of this box.
     """
     def _check_child(self, child):
-        assert isinstance(child, (paragraph, box,)), TypeError(
+        assert isinstance(child, (link, paragraph, box,)), TypeError(
             "Can’t add %s to a box, only paragraphs and boxes." % repr(child))
 
     def render(self, canvas, cursor=None):
@@ -231,10 +277,64 @@ class box(_container_node):
             # Draw the background in the padding_canvas
 
         return _container_node.render(self, padding_canvas, cursor)
+        
+class null_box(box):
+    def __init__(self):
+        box.__init__(self)
+        
+    def render(self, canvas, cursor=None):
+        return canvas.h(), None,
+        
+class div(box):
+    """
+    A div is just like a box, but no line-wrapping will be performed internally.
+    On a call render(), a temporary canvas will be constructed and the contents
+    of the box will be rendered. If successfull, the canvas will be appended to
+    the one provided to render(), otherwise a overflow-maker will be returned
+    as cursor and the process starts over. Should this cursor be passed to
+    render(), indicating a new canvas can’t contain the DIV, a
+    OutOfVerticalSpace exception will be raised.
+    """
+    def __init__(self, *children, **kw):
+        """
+        If a bastard_threshhold is set, render() will only report successfull
+        rendition of the children, if there is that much extra vertical space
+        on the provided canvas. This can make sure that the first lines of the
+        next paragraph can be drawn on the same page/column.
+        """
+        self.bastard_threshhold = kw.get("bastard_threshhold", 0.0)
+        box.__init__(self, *children, **kw)
+        
+    out_of_space_marker = { "status": "out of space" }
+    def render(self, canvas, cursor=None):
+        spaces = []
+        y = canvas.h()
+        for kid in self:
+            spaces.append(t4.psg.drawing.box.canvas(canvas,
+                                                    0, 0, canvas.w(), y))
+            y, kidcursor = kid.render(spaces[-1], None)
+            if kidcursor is not None:
+                # “kid” has not been rendered completely.
+                if cursor and cursor.get(
+                        id(self), None) == self.out_of_space_marker:
+                    raise BoxTooSmall()
+                else:
+                    return y, {id(self): self.out_of_space_marker,}, 
+                    
+        if y < self.bastard_threshhold:
+            return 0.0, {id(self): self.out_of_space_marker,}, 
+                    
+        # All „kids“ have been drawn on the tmpcanvas. We append it to
+        # the output psg.box.box-tree and return the space used by all
+        # kids and cursor=None indicating that we're copletely
+        # rendered.
+        for space in spaces:
+            canvas.append(space)
+        return y, None,
 
 class paragraph(_node):
     """
-    This is a block of text. Think <div>.
+    This is a block of multiple lines of text (and text only).
     """
     def _check_child(self, child):
         assert isinstance(child, word), TypeError(
@@ -376,7 +476,7 @@ class paragraph(_node):
                         idx -= 1
 
                     break
-                    
+            
             self.last_word_idx = idx
             self.last = ( idx == len(self.paragraph)-1 and \
                           self.hyphenation_remainder is None)

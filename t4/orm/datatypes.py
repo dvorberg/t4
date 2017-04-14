@@ -632,8 +632,7 @@ class wrapper(datatype):
             return _inside_method(self, wrapper.__dict__[name])
         
         elif hasattr(inside_datatype, name):
-            return getattr(self.inside_datatype, name)
-        
+            return getattr(self.inside_datatype, name)        
         else:
             raise AttributeError(name)
 
@@ -712,6 +711,20 @@ class delayed(wrapper):
     def __copy__(self):
         return delayed(copy.copy(self.inside_datatype), self.cache)
 
+class readonly(wrapper):
+    """
+    This marks a dbproperty as readonly. A TypeError will be raised on
+    attempts to set the property to a value.
+    """
+    def __get__(self, dbobj, owner="dummy"):
+        return self.inside_datatype.__get__(dbobj, owner)
+        
+    def __set__(self, dbobj, value):
+        raise TypeError("Tried to set a read-only dbproperty.")
+        
+    def __copy__(self):
+        return readonly(copy.copy(self.inside_datatype))
+
 class csv(wrapper):
     """
     csv stands for 'comma separated values'. This wrapper takes a
@@ -743,7 +756,7 @@ class csv(wrapper):
     def __copy__(self):
         return csv(copy.copy(self.inside_datatype), self.separator)
         
-class expression(wrapper):
+class expression(readonly):
     """
     Insert an arbitrary SQL expression into the SQL query.
 
@@ -1266,3 +1279,18 @@ class enum(string):
                 
         datatype.__set__(self, dbobj, value)
 
+class dependend_dict(dict):
+    """
+    A dict that will register a change for a dbproperty with a dbobject
+    on each modification.
+    """
+    def __init__(self, dbobject, dbproperty, data):
+        self.dbobject = dbobject
+        self.dbproperty = dbproperty
+        
+        dict.__init__(data)
+
+    def __setkey__(self, name, value):
+        dict.__setkey__(self, name, value)
+        self.dbobject.__register_change__(self.dbproperty)
+        

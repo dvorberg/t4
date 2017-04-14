@@ -764,6 +764,14 @@ class select(statement):
 
         return "SELECT %(columns)s FROM %(relations)s %(clauses)s" % locals()
 
+    @property
+    def clauses(self):
+        return self._clauses
+
+    @property
+    def relations(self):
+        return self._relations
+
 class insert(statement):
     """
     Encapsulate an INSERT statement.

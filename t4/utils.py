@@ -25,28 +25,40 @@
 ##
 ##  I have added a copy of the GPL in the file COPYING
 
-import sys, os, os.path as op, types, subprocess, threading
-from random import random
+import sys, os, os.path as op, types, subprocess, threading, random, itertools
 from string import *
 from types import *
+
+def apple_style_random_password(groupnum=4, grouplength=3):
+    letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
+    digits = "0123456789"
+    characters = letters + digits
+
+    def groups():
+        while True:
+            yield join(random.sample(characters, grouplength), "")
+
+    groups = itertools.islice(groups(), groupnum)
+    return join(groups, "-")
+    
 
 password_specials = "+-/*!&;$,@"
 def random_password(length=8, use_specials=True):
     letters = "ABCDEFGHJKLMNPQRSTUVWYXZabcdefghijkmnpqrstuvwyxz"
     digits = "0123456789"
-    letters_and_digits = letters + digits
+    characters = letters + digits
 
     ret = []
-    ret.append(letters[int(random() * len(letters))])
+    ret.append(random.choice(letters))
     for a in range(length-1):
-        ret.append(letters_and_digits[int(random() * len(letters_and_digits))])
+        ret.append(random.choice(characters))
 
-    if use_specials:
-        for a in ( digits, password_specials, ):
-            idx = int(random() * (len(ret)-1)) + 1
-            ret.insert(idx, a[int(random() * len(a))])
 
-    if len(ret) > length: ret = ret[:length]
+    if use_specials and length > 2:
+        ret = ret[:-1]
+        idx = random.randint(1, length-2)
+        ret.insert(idx, random.choice(password_specials))
+            
     return join(ret, "")
 
 def password_good_enough(password):
@@ -288,7 +300,8 @@ def here_and_next(seq, end_marker=None):
             yield here, next        
             here = next
 
-def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
+def run_with_timeout(cmd, timeout=25, input=None,
+                     creates_output=False, shell=None):
     """
     Executes cmd using a subprocess (including shell). If `input` is
     provided, it will be piped into the subprocess, if creates_output
@@ -296,11 +309,19 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     @returns: A pair as: The return value from subprocess.communicate() ( 
        a tuple) of various contents and and the (integer) exit code of the
-       subprocess. Usage: ((stdin, stdout), retval) = run_with_timeout(…)
+       subprocess. Usage: ((stdout, stderr), retval) = run_with_timeout(…)
 
     @raises: IOError if the timeout is exceed.
     """
-    if type(cmd) == types.ListType:
+    if type(cmd) == types.StringType:
+        shell = True
+    elif type(cmd) == types.ListType:
+        shell = False
+    else:
+        raise TypeError(
+            "Command must be either string or list, not %s" % type(cmd))
+        
+    if shell and type(cmd) == types.ListType:
         cmd = join(cmd, " ")
 
     d = {}
@@ -314,7 +335,7 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
     else:
         stdout = None
         
-    pipe = subprocess.Popen( cmd, shell=True,
+    pipe = subprocess.Popen( cmd, shell=shell,
                              stdin = stdin,
                              stdout = stdout,
                              stderr = subprocess.PIPE )
@@ -324,17 +345,49 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     thread = threading.Thread(target=target)
     thread.pipe = pipe
-
+    
     thread.start()
-
     thread.join(timeout)
 
     if thread.is_alive():
-        thread.pipe.terminate()
+        thread.pipe.kill()
         thread.join()
         raise IOError("Subprocess timeout.")
 
     return d["output"]
+    
+def run(cmd, input=None, creates_output=False, shell=None):
+    """
+    Just like run_with_timeout() above, just without a timeout.
+    """
+    if type(cmd) == types.StringType:
+        shell = True
+    elif type(cmd) == types.ListType:
+        shell = False
+    else:
+        raise TypeError(
+            "Command must be either string or list, not %s" % type(cmd))
+        
+    if shell and type(cmd) == types.ListType:
+        cmd = join(cmd, " ")
+
+    d = {}
+    if input is not None:
+        stdin = subprocess.PIPE
+    else:
+        stdin = None
+
+    if creates_output:
+        stdout = subprocess.PIPE
+    else:
+        stdout = None
+        
+    pipe = subprocess.Popen( cmd, shell=shell,
+                             stdin = stdin,
+                             stdout = stdout,
+                             stderr = subprocess.PIPE )
+
+    return ( pipe.communicate(input), pipe.returncode, )
 
 def thumb_size(original_size, maxsize):
     """
