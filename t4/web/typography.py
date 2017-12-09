@@ -268,7 +268,7 @@ def pretty_german_integer(i, form=False):
             else:
                 i = german_integer(i)
         else:
-            raise TypeError
+            raise TypeError(type(i))
     
     s = str(i)
     ret = ""
