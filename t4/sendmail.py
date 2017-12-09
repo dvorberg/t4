@@ -15,7 +15,7 @@
 ##  (at your option) any later version.
 ##
 ##  This program is distributed in the hope that it will be useful,
-##  but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  but WITHOUtest@test.deT ANY WARRANTY; without even the implied warranty of
 ##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ##  GNU General Public License for more details.
 ##
@@ -28,6 +28,9 @@
 
 import sys, os, os.path as op, types, smtplib
 from string import *
+
+from t4.res import email_re
+from t4.utils import run
 
 from ll.xist import xsc
 
@@ -43,7 +46,8 @@ from email.header import Header
 
 
 class sendmail_attachment:
-    def __init__(self, filename, data, mime_type=None):
+    def __init__(self, filename, data, mime_type=None,
+                 content_disposition="attachment", headers={}):
         self.filename = filename
         self.data = data
 
@@ -53,6 +57,8 @@ class sendmail_attachment:
                 mime_type = "application/octet-stream"
                 
         self.mime_type = mime_type
+        self.content_disposition = content_disposition
+        self.headers = headers
 
     def part(self):
         maintype, subtype = self.mime_type.split("/", 1)
@@ -70,16 +76,20 @@ class sendmail_attachment:
             encoders.encode_base64(msg)
             
         # Set the filename parameter
-        msg.add_header("Content-Disposition", "attachment",
+        msg.add_header("Content-Disposition",
+                       self.content_disposition,
                        filename=self.filename)
 
+        for key, value in self.headers.items():
+            msg.add_header(key, value)
+        
         return msg
 
     
 def sendmail(from_name, from_email,
              to_name, to_email,
-             subject, message, attachments=[], headers={}, bcc=[],
-             text_subtype="plain", encoding="utf-8"):
+             subject, message, attachments=[], headers={}, bcc=[],             
+             text_subtype="plain", encoding="utf-8", multipart_subtype="mixed"):
 
     if type(from_name) != types.UnicodeType: from_name = unicode(from_name)
     if type(to_name) != types.UnicodeType: to_name = unicode(to_name)
@@ -87,7 +97,18 @@ def sendmail(from_name, from_email,
     
     if type(bcc) == types.StringType:
         bcc = [ bcc, ]
-    
+
+    bcc = map(str, bcc)
+
+    # Verify all the e-Mail Addresses
+    def verity_email_address(email):
+        if email_re.match(email) is None:
+            raise ValueError("Not a valid e-mail address: %s" % repr(email))
+
+    map(verity_email_address, bcc)
+    verity_email_address(from_email)
+    verity_email_address(to_email)
+        
     if isinstance(message, xsc.Node):
         message = message.bytes(encoding=encoding)
         if text_subtype == "plain":
@@ -100,7 +121,7 @@ def sendmail(from_name, from_email,
     if len(attachments) == 0:
         outer = textpart
     else:
-        outer = MIMEMultipart()
+        outer = MIMEMultipart(multipart_subtype)
         outer.attach(textpart)
 
         
@@ -124,7 +145,17 @@ def sendmail(from_name, from_email,
 
     composed = outer.as_string()
 
-    s = smtplib.SMTP("localhost")
-    s.sendmail(from_email, to_email, composed)
-    for email in bcc: s.sendmail(from_email, email, composed)
-    s.quit()
+    #s = smtplib.SMTP("localhost")
+    #s.sendmail(from_email, to_email, composed)
+    #for email in bcc: s.sendmail(from_email, email, composed)
+    #s.quit()
+
+    (stdout, stderr), exitcode = run(
+        ["/usr/sbin/sendmail",
+         "-f", from_email, # Set the envelope sender.
+         to_email] + bcc,
+        input=composed)
+    
+    if exitcode != 0: raise IOError(stderr)
+    
+    

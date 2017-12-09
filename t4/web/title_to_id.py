@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2011–16 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -28,7 +28,7 @@
 # Python
 import sys, re
 from string import *
-from unicodedata import decomposition
+from unicodedata import decomposition, normalize
 from types import StringType, UnicodeType
 
 def asciify(string):
@@ -37,7 +37,15 @@ def asciify(string):
 
     This very cool function originates at
     http://www.physic.ut.ee/~kkannike/english/prog/python/index.html
-    ''' 
+    '''
+    # Unfortunately, I don’t really understand, how this function works.
+    # I have a hunch, this could be done better with a decomposed representation
+    # of the string ("NFKD"), but I don’t have time to really test a function
+    # as sensitive as this one right now.
+    # To work reliably the way it is, strings must consist of composed
+    # characters.
+    string = normalize("NFC", string)
+    
     temp = u'' 
     for char in string:
         decomp = decomposition(char)

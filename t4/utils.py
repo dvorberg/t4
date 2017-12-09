@@ -300,7 +300,8 @@ def here_and_next(seq, end_marker=None):
             yield here, next        
             here = next
 
-def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
+def run_with_timeout(cmd, timeout=25, input=None,
+                     creates_output=False, shell=None):
     """
     Executes cmd using a subprocess (including shell). If `input` is
     provided, it will be piped into the subprocess, if creates_output
@@ -312,7 +313,15 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     @raises: IOError if the timeout is exceed.
     """
-    if type(cmd) == types.ListType:
+    if type(cmd) == types.StringType:
+        shell = True
+    elif type(cmd) == types.ListType:
+        shell = False
+    else:
+        raise TypeError(
+            "Command must be either string or list, not %s" % type(cmd))
+        
+    if shell and type(cmd) == types.ListType:
         cmd = join(cmd, " ")
 
     d = {}
@@ -326,7 +335,7 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
     else:
         stdout = None
         
-    pipe = subprocess.Popen( cmd, shell=True,
+    pipe = subprocess.Popen( cmd, shell=shell,
                              stdin = stdin,
                              stdout = stdout,
                              stderr = subprocess.PIPE )
@@ -336,17 +345,49 @@ def run_with_timeout(cmd, timeout=25, input=None, creates_output=False):
 
     thread = threading.Thread(target=target)
     thread.pipe = pipe
-
+    
     thread.start()
-
     thread.join(timeout)
 
     if thread.is_alive():
-        thread.pipe.terminate()
+        thread.pipe.kill()
         thread.join()
         raise IOError("Subprocess timeout.")
 
     return d["output"]
+    
+def run(cmd, input=None, creates_output=False, shell=None):
+    """
+    Just like run_with_timeout() above, just without a timeout.
+    """
+    if type(cmd) == types.StringType:
+        shell = True
+    elif type(cmd) == types.ListType:
+        shell = False
+    else:
+        raise TypeError(
+            "Command must be either string or list, not %s" % type(cmd))
+        
+    if shell and type(cmd) == types.ListType:
+        cmd = join(cmd, " ")
+
+    d = {}
+    if input is not None:
+        stdin = subprocess.PIPE
+    else:
+        stdin = None
+
+    if creates_output:
+        stdout = subprocess.PIPE
+    else:
+        stdout = None
+        
+    pipe = subprocess.Popen( cmd, shell=shell,
+                             stdin = stdin,
+                             stdout = stdout,
+                             stderr = subprocess.PIPE )
+
+    return ( pipe.communicate(input), pipe.returncode, )
 
 def thumb_size(original_size, maxsize):
     """

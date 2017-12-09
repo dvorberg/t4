@@ -37,22 +37,20 @@ import sys, re
 from types import *
 from string import *
 
-dbapi = None
+from t4.debug import debug
 
-if dbapi is None:
-    try:
-        import psycopg2 as psycopg
-        dbapi = psycopg
-    except ImportError:
-        dbapi = None
+dbapi = None
 
 try:
     import psycopg2
+    dbapi = psycopg2
+    psycopg = psycopg2
     number, rest = psycopg2.__version__.split(" ", 1)
     psycopg2_version = tuple(map(int, number.split(".")))
-except ImportError:
+except ImportError, ie:
     psycopg2_version = None
-        
+    from traceback import print_exc
+    print_exc(file=debug)
 
 if dbapi is None:
     try:

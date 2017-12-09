@@ -344,7 +344,7 @@ class page:
        instances for all the fonts registered with this page
     """
     
-    def __init__(self, document, page_size="a4", label=None):
+    def __init__(self, document, page_size="a4", label=None, ordinal=None):
         """
         Model a page in a document. A page knows about its resources,
         either on page or on document level.
@@ -365,18 +365,30 @@ class page:
             self._w, self._h = page_size
         else:
             self._w, self._h = PAPERSIZES[page_size]
-
-        self.label = label
-
+            
         self._resources = resource_set()
 
         document.__inc_page_counter()
+
+        if ordinal is None:
+            self.ordinal = document.page_counter()
+        else:
+            self.ordinal = ordinal
+            
+        if label is None:
+            self._label = str(self.ordinal)
+        else:
+            self._label = label
 
         self._number_of_fonts = 0
         self._font_wrappers = {}
 
     def w(self): return self._w
     def h(self): return self._h
+
+    @property
+    def label(self):
+        return self._label
     
     def add_resource(self, resource, document_level=True):
         """

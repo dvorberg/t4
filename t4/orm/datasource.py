@@ -231,7 +231,7 @@ class datasource_base:
             
         return self._modify_cursor
 
-    def flush_updates(self, select_after_update=False):
+    def flush_updates(self, select_after_update=True):
         cursor = self.__modify_cursor__()
         for dbobj in self._changed_dbobjs:
             dbobj.__perform_updates__(cursor, select_after_update)

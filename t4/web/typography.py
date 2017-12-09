@@ -233,7 +233,7 @@ def pretty_german_float(f, decimals=2, form=False):
                 except ValueError:
                     return f
         else:
-            raise TypeError
+            raise TypeError("Don’t know how to convert " + str(type(f)))
         
     # f = float(f) Don’t do that. If this is a decimal.Decimal, we’d loose
     # precision!
@@ -261,7 +261,7 @@ def pretty_german_float(f, decimals=2, form=False):
         return s
 
 def pretty_german_integer(i, form=False):
-    if type(i) != IntType and not isinstance(i, decimal.Decimal):
+    if not type(i) in (IntType, LongType,) and not isinstance(i, decimal.Decimal):
         if form:
             if i is None:
                 return ""
