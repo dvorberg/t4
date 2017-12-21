@@ -69,6 +69,12 @@ class ObjectMustBeInserted(ORMException):
     in the database.
     """
 
+class ObjectWasNotInserted(ORMException):
+    """
+    This exception is raised when an object was supposed to be inserted,
+    but could not be queried from the database after the INSERT command.
+    """
+
 class ObjectAlreadyInserted(ORMException): 
     """
     Relationships may require dbobjects not to have been inserted into
@@ -95,7 +101,7 @@ class PrimaryKeyNotKnown(ORMException):
     
 class BackendError(ORMException):
     """
-    The backend had something to complain
+    The backend had something to complain.
     """
 
 class DuplicateKey(ORMException):

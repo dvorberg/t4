@@ -506,6 +506,9 @@ class datasource_base:
             self._modify_cursor.execute(query)
             tpl = self._modify_cursor.fetchone()
 
+            if tpl is None:
+                raise ObjectWasNotInserted()
+            
             for property, value in zip(properties, tpl):
                 property.__set_from_result__(self, dbobj, value)
 
