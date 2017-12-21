@@ -58,7 +58,7 @@ def dig(record_type, fqdn, server=None):
 
     try:
         answer = resolver.query(fqdn, record_type)
-    except dns.resolver.NoAnswer:
+    except ( dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, ):
         return None
 
     def name_to_string(name):
