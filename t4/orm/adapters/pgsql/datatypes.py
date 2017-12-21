@@ -344,8 +344,10 @@ class jsonb(json):
         This method evaulates the value into a Python datastructure.
         """
         if value is None and self.empty_object_on_null: value = "{}"
-        
-        #value = py_json.loads(value)
+
+        #if value is not None:
+        #    print "value =", repr(value)
+        #    value = py_json.loads(value)
 
         if type(value) == types.StringType:
             raise ValueError("STRING " + self.attribute_name)
