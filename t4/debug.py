@@ -254,8 +254,15 @@ debug = _debug()
 sqllog = _sql()
 
 class dont_log_sql:
+    def __init__(self, reset_state=None):
+        self._reset_state = reset_state
+        
     def __enter__(self):
-        self.state = sqllog.verbose
+        if self._reset_state is None:
+            self.state = sqllog.verbose
+        else:
+            self.state = self._reset_state
+            
         sqllog.verbose = False
 
     def __exit__(self, type, value, traceback):
