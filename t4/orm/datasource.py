@@ -163,6 +163,8 @@ class datasource_base:
         self._changed_dbobjs = set()
 
     def __register_change_of__(self, dbobj):
+        if self.closed():
+            raise DatasourceClosed()
         self._changed_dbobjs.add(dbobj)
         
     def _dbconn(self):
@@ -170,6 +172,9 @@ class datasource_base:
         Return the dbconn for this ds
         """
         return self._conn
+
+    def closed(self):
+        return (self._conn is None)
     
     def query_one(self, query):
         """        
@@ -268,6 +273,8 @@ class datasource_base:
         """
         Return a newly created dbi cursor.
         """
+        if self.closed():
+            raise DatasourceClosed()
         return sql.cursor_wrapper(self, self._dbconn().cursor())
 
     def close(self):
@@ -275,6 +282,7 @@ class datasource_base:
         Close the connection to the database.
         """
         self._dbconn().close()
+        self._conn = None
 
     def ping(self):
         """
