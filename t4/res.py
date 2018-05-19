@@ -44,3 +44,5 @@ crawler_re = re.compile(r"^(?!Mozilla|Opera|Iceweasel)|"
                         r"^Mozilla/5\.0 \(compatible; bingbot")
 
 http_url_re = re.compile("https?://(?:[0-9a-z](?:[0-9a-z-]*[0-9a-z])?\.)+[a-z]{2,6}(/.*)?")
+
+login_re = re.compile(r"[a-zA-Z0-9_][-a-zA-Z0-9_\.]{31}")
