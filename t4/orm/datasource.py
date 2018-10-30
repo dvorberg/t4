@@ -41,6 +41,8 @@ import string
 # t4
 from t4 import sql, stupid_dict
 import keys
+from t4.debug import sqllog
+
 from exceptions import *
 
 def datasource(connection_string="", **kwargs):
@@ -143,6 +145,35 @@ def datasource(connection_string="", **kwargs):
         
         return ds
     
+class cursor_wrapper:
+    """
+    The cursor wrapper takes a regular database cursor and 'wraps' it
+    up so that its execute() method understands sql.* objects as
+    parameters. 
+    """
+    def __init__(self, ds, cursor):
+        self._ds = ds
+        self._cursor = cursor
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+    def execute(self, command, params=None):
+        if type(command) == UnicodeType:
+            raise TypeError("Database queries must be strings, not unicode")
+
+        if isinstance(command, sql.statement):
+            runner = sql.sql(self._ds)
+            command = runner(command)
+            params = runner.params
+
+        if params is None:
+            print >> sqllog, self._cursor, command
+            self._cursor.execute(command)
+        else:
+            print >> sqllog, self._cursor, command, " || ", repr(params)
+            self._cursor.execute(command, tuple(params))
+
 class datasource_base:
     """
     The DataSource encapsulates the functionality we need to talk to the
@@ -275,7 +306,7 @@ class datasource_base:
         """
         if self.closed():
             raise DatasourceClosed()
-        return sql.cursor_wrapper(self, self._dbconn().cursor())
+        return cursor_wrapper(self, self._dbconn().cursor())
 
     def close(self):
         """
