@@ -44,6 +44,11 @@ class InternalError(Exception):
     Something inside orm has gone wrong.
     """
 
+class DatasourceClosed(ORMException):
+    """
+    The datasource was closed.
+    """
+
 class IllegalConnectionString(ORMException):
     """
     This exception indicates a syntax error in a connection string
@@ -140,3 +145,4 @@ class IllegalForeignKey(ORMException):
 
 class PasswordsDontMatch(ORMException):
     pass
+
