@@ -742,6 +742,8 @@ class raster_image(_eps_image):
     is a lazy peration. When opening an image with it, PIL only reads
     the image header to determine its size and color depth. Conversion
     of the image takes place on writing.
+
+    This assumes 72dpi raster images. Use _eps_image.fit() if needed.
     """
     class raster_image_buffer:
         def __init__(self, pil_image):
