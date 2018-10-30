@@ -655,6 +655,8 @@ class many2one(relationship):
         
         if self.column is not None:
             value = datatype.__get__(self, dbobj)
+            if value is None:
+                return None
             ret = ds.select_by_primary_key(self.child_class, value)
         else:
             foreign_key = keys.foreign_key(dbobj, self.child_class,

@@ -1,0 +1,40 @@
+
+# bold	Start bold text
+# smul	Start underlined text
+# rmul	End underlined text
+# rev	Start reverse video
+# blink	Start blinking text
+# invis	Start invisible text
+# smso	Start "standout" mode
+# rmso	End "standout" mode
+# sgr0	Turn off all attributes
+# setaf <value>	Set foreground color
+# setab <value>	Set background color
+
+# Color       #define       Value       RGB
+# black     COLOR_BLACK       0     0, 0, 0
+# red       COLOR_RED         1     max,0,0
+# green     COLOR_GREEN       2     0,max,0
+# yellow    COLOR_YELLOW      3     max,max,0
+# blue      COLOR_BLUE        4     0,0,max
+# magenta   COLOR_MAGENTA     5     max,0,max
+# cyan      COLOR_CYAN        6     0,max,max
+# white     COLOR_WHITE       7     max,max,max
+
+black="\001$(tput setaf 0)\002"
+red="\001$(tput setaf 1)\002"
+green="\001$(tput setaf 2)\002"
+yellow="\001$(tput setaf 3)\002"
+blue="\001$(tput setaf 4)\002"
+magenta="\001$(tput setaf 5)\002"
+cyan="\001$(tput setaf 6)\002"
+white="\001$(tput setaf 7)\002"
+
+bold="\001$(tput bold)\002"
+underline="\001$(tput smul)\002"
+dim="\001$(tput dim)\002"
+reset="\001$(tput sgr0)\002"
+
+#PS1="$dim[\t] " # [hh:mm:ss]
+#PS1+="$green\u@\h" # user@host
+#PS1+="$blue\w\$$reset " # workingdir$
