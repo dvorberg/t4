@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2002–2015 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2002–2018 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
@@ -610,6 +610,9 @@ class wrapper(datatype):
     dbclass inheritance to work properly.
     """
     def __init__(self, inside_datatype):
+        if type(inside_datatype) == ClassType:
+            raise TypeError("The inside_datatype must be a datatype instance, "
+                            "not class.")
         self.inside_datatype = inside_datatype
 
     def __getattribute__(self, name):        
@@ -838,7 +841,7 @@ class expression(readonly):
     def __repr__(self):
         return "<expression of type %s: %s>" % ( repr(self.inside_datatype),
                                                  repr(self._expression), )
-        
+
 class property_group(datatype):
     """
     This datatype will manage several columns of the same datatype
