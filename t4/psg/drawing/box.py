@@ -67,7 +67,8 @@ class box:
     The box class provides two alternative constructors: from_bounding_box
     and from_center.
     """
-    def __init__(self, parent, x, y, w=0, h=0, border=False, clip=False):
+    def __init__(self, parent, x, y, w=0, h=0, border=False, clip=False,
+                 comment=""):
         """
         Construct a box with lower left corner (x, y), with w and
         height h.
@@ -91,7 +92,9 @@ class box:
         self.body = file_like_buffer()
         self.tail = file_like_buffer()
 
-        self.push("gsave", "grestore")
+        cmt = "%s: %s\n" % (self.__class__.__name__, comment)
+        self.push("gsave % begin " + cmt,
+                  "grestore % end " + cmt)
         
         if border:
             self.print_bounding_path()
@@ -231,8 +234,9 @@ class canvas(box):
     corner.
     """
     
-    def __init__(self, parent, x, y, w=0, h=0, border=False, clip=False, **kw):
-        box.__init__(self, parent, x, y, w, h, border, clip)
+    def __init__(self, parent, x, y, w=0, h=0,
+                 border=False, clip=False, comment="", **kw):
+        box.__init__(self, parent, x, y, w, h, border, clip, comment)
 
         # Move the origin to the lower left corner of the bounding box
         if self.x() != 0 or self.y() != 0:
@@ -245,8 +249,9 @@ class textbox(canvas):
     """
     SOFT_NEWLINE = r"\n"
 
-    def __init__(self, parent, x, y, w, h, border=False, clip=False, **kw):
-        canvas.__init__(self, parent, x, y, w, h, border, clip)
+    def __init__(self, parent, x, y, w, h,
+                 border=False, clip=False, comment="", **kw):
+        canvas.__init__(self, parent, x, y, w, h, border, clip, comment)
         self._line_cursor = h
         self.set_font(None)
         
@@ -627,9 +632,10 @@ class _eps_image(box):
     both embed external images into the target document as a Document
     section.
     """
-    def __init__(self, parent, subfile, bb, document_level, border, clip):
+    def __init__(self, parent, subfile, bb, document_level,
+                 border, clip, comment):
         box.__init__(self, parent, bb.llx, bb.lly, bb.width(), bb.height(),
-                     border, clip)
+                     border, clip, comment)
 
         if document_level:
             # If the EPS file is supposed to live at document level,
@@ -706,7 +712,7 @@ class eps_image(_eps_image):
     PostScript file.
     """
     def __init__(self, parent, fp, document_level=False,
-                 border=False, clip=False):
+                 border=False, clip=False, comment=""):
         """
         @param fp: File pointer opened for reading of the EPS file to be
            included
@@ -728,7 +734,7 @@ class eps_image(_eps_image):
             
         _eps_image.__init__(self, parent, fp,
                             bb, document_level,
-                            border, clip)
+                            border, clip, comment)
 
 
 class raster_image(_eps_image):
@@ -753,7 +759,7 @@ class raster_image(_eps_image):
             self.pil_image.save(fp, "EPS")
     
     def __init__(self, parent, pil_image, document_level=False,
-                 border=False, clip=False):
+                 border=False, clip=False, comment=""):
         """
         @param pil_image: Instance of PIL's image class
         @param document_level: Boolean indicating whether the EPS file shall
@@ -769,14 +775,15 @@ class raster_image(_eps_image):
             
         fp = self.raster_image_buffer(pil_image)
 
-        _eps_image.__init__(self, parent, fp, bb, document_level, border, clip)
+        _eps_image.__init__(self, parent, fp, bb, document_level,
+                            border, clip, comment)
 
 class wmf_file(_eps_image):
     """
     This class creates a box from a Windows Meta File.
     """
     def __init__(self, parent, wmf_fp, document_level=False,
-                 border=False, clip=False):
+                 border=False, clip=False, comment=""):
 
         eps = wmf2eps(wmf_fp)
         
@@ -784,6 +791,6 @@ class wmf_file(_eps_image):
         bb = bounding_box.from_tuple(bb)
         
         _eps_image.__init__(self, parent, eps, bb, document_level,
-                            border, clip)
+                            border, clip, comment)
 
     
