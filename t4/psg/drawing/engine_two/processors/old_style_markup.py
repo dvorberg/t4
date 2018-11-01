@@ -107,6 +107,9 @@ def boxes(source, styles):
     if type(source) != types.UnicodeType:
         source = unicode(str(source))
 
+    # Convert to unix linefeeds.
+    source = source.replace(u"\r\n", u"\n")
+        
     # As a means of preparation, we replace linefeeds that we want to
     # ignore with simple spaces.
     source = ignorable_linefeeds.sub(" ", source)
