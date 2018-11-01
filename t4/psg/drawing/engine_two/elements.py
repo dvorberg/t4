@@ -177,7 +177,8 @@ class _container_node(_node):
             cursor = {}
             
         for index, element in elements:
-            space = t4.psg.drawing.box.canvas(canvas, 0, 0, canvas.w(), y)
+            space = t4.psg.drawing.box.canvas(canvas, 0, 0, canvas.w(), y,
+                                              comment="container_node.render()")
             canvas.append(space)
             
             y, cursor = element.render(space, cursor)
@@ -271,7 +272,8 @@ class box(_container_node):
             else:
                 t, r, b, l = margin
                 ret =  t4.psg.drawing.box.canvas(
-                    parent, l, b, parent.w() - r - l, parent.h() - t - b)
+                    parent, l, b, parent.w() - r - l, parent.h() - t - b,
+                    comment="box.render()")
                 parent.append(ret)
                 return ret
 
@@ -291,13 +293,18 @@ class static_box(box):
 
     You must implement the height() and draw() functions. The
     height()-function is called once and its result cached for later
-    use.
+    use.    
     """
-    def __init__(self, *children, **kw):
-        box.__init__(self, *children, **kw)
-        self._height = None
+    def __init__(self, style=None):
+        """
+        @style: Goes into the _node constructor above.
+        """        
+        box.__init__(self, style=None)
+
+        # Map widths to heights.
+        self._heights = {}
         
-    def height(self):
+    def height(self, for_width):
         """
         Return the height of the object to be drawn.
         """
@@ -310,11 +317,12 @@ class static_box(box):
         raise NotImplementedError()
 
     def render(self, canvas, cursor=None):
-        if self._height is None:
-            self._height = self.height()
+        if not self._heights.has_key(canvas.w()):
+            self._heights[canvas.w()] = self.height(canvas.w())
+        height = self._heights[canvas.w()]
 
         y = canvas.h()
-        if y < self._height:
+        if y < height:
             if cursor and \
                cursor.get(id(self), None) == self.out_of_space_marker:
                 # Box too small, will never fit.
@@ -323,14 +331,145 @@ class static_box(box):
                 # Not enough space in the current box.
                 return y, {id(self): self.out_of_space_marker,},
         else:
-            space = t4.psg.drawing.box.canvas(canvas, 0, y-self._height,
-                                              canvas.w(), self._height)
+            space = t4.psg.drawing.box.canvas(canvas, 0, y-height,
+                                              canvas.w(), height,
+                                              comment="static_box.render()")
             canvas.append(space)
             self.draw(space)
-            return y - self._height, None,
+            return y - height, None,
 
+class predraw_static_box(static_box):
+    def __init__(self, page):
+        static_box.__init__(self)
+        self._page = page
+
+        # Temporary canvases on which the contents are drawn for a
+        # specific width.
+        self.canvases = {}
+
+    def predraw(self, canvas):
+        """
+        Provided with a canvas that has the requred width and very large
+        height, draw the contents on that canvas and return the amount
+        of space at the top of the canvas covered. 
+        """
+        raise NotImplementedError()
+
+    def _canvas_for(self, width):
+        if not self.canvases.has_key(width):
+            tmpcanvas = t4.psg.drawing.box.canvas(
+                self._page,
+                0, 0,
+                width, self._page.h(),
+                comment="predraw_statix_box tmpcanvas")
+            height = self.predraw(tmpcanvas)
+            
+            canvas = t4.psg.drawing.box.canvas(
+                self._page, 0, 0, width, height,
+                comment="predraw_statix_box canvas for width %f" % width)
+
+            print >> canvas, 0, -(tmpcanvas.h() - height), "translate"
+            canvas.append(tmpcanvas)
+            
+            self.canvases[width] = canvas
+            
+        return self.canvases[width]
+
+    # Implement the methods needed by static_box
+    def height(self, width):
+        return self._canvas_for(width).h()
+
+    def draw(self, canvas):
+        canvas.append(self._canvas_for(canvas.w()))
+
+class simple_static_table(box):
+    """
+    This is a table of static boxes. That means table rows will never
+    be split on pagefeed. The table, however, may be put on several
+    pages. 
+    """
+    def __init__(self, column_widths, rownum, comment=""):
+        box.__init__(self)
         
+        self.column_widths = column_widths
+        self.rownum = rownum
         
+        self.comment = comment
+
+        self._boxes = {}
+
+    def static_box(self, column_idx, row_idx):
+        """
+        For the specified column and row index, this must return a
+        static_box instance.
+        """        
+        raise NotImplementedError()
+
+    class null_box:
+        """
+        Returned by _box_for() below, if no content is provided by
+        the implementation.
+        """
+        def height(self, width):
+            return 0
+
+        def draw(self, canvas):
+            pass
+    
+    def _box_for(self, col, row):
+        if not self._boxes.has_key( (col, row) ):
+            self._boxes[(col, row)] = self.static_box(col, row)
+
+        if self._boxes[(col, row)] is None:
+            return self.null_box()
+        else:
+            return self._boxes[(col, row)]
+    
+    def render(self, canvas, cursor=None):
+        print >> canvas, "%% begin %s %s" % ( self.__class__.__name__,
+                                             self.comment, )
+        if sum(self.column_widths) > canvas.w():
+            raise BoxTooSmall("Must be at least %{f}pt wide for table." % sum(
+                self.column_widths))
+        y = canvas.h()
+        for row in range(self.rownum):
+            colheights = []
+            for col, colwidth in enumerate(self.column_widths):
+                colheights.append(self._box_for(col, row).height(colwidth))
+            colheight = max(colheights)
+
+            if colheight > canvas.h():
+                if cursor is None: cursor = {}
+                if cursor.has_key(id(self)) and \
+                   cursor[id(self)] == row:
+                    # We already tried putting this row into a provided canvas
+                    # and if didn’t fit.
+                    raise BoxTooSmall()
+                else:
+                    # Next time around, try to draw this row again.
+                    cursor[id(self)] = row
+                    return y, cursor,
+            else:
+                # This row will fit.
+
+                for col, colwidth in enumerate(self.column_widths):
+                    td = self._box_for(col, row)
+                    td_canvas = t4.psg.drawing.box.canvas(
+                        canvas,
+                        sum(self.column_widths[:col]), y-colheights[col],
+                        colwidth, colheight,
+                        comment=("simple_static_table.render() "
+                                 "td col=%i,row=%i" % (col, row)))
+                    canvas.append(td_canvas)
+                    td.draw(td_canvas)
+                
+                y -= colheight
+                    
+        print >> canvas, "%% end %s %s" % ( self.__class__.__name__,
+                                           self.comment, )
+
+        return y, None,
+                    
     
 class null_box(box):
     def __init__(self):
@@ -344,7 +483,7 @@ class div(box):
     A div is just like a box, but no line-wrapping will be performed internally.
     On a call render(), a temporary canvas will be constructed and the contents
     of the box will be rendered. If successfull, the canvas will be appended to
-    the one provided to render(), otherwise a overflow-maker will be returned
+    the one provided to render(), otherwise an overflow-marker will be returned
     as cursor and the process starts over. Should this cursor be passed to
     render(), indicating a new canvas can’t contain the DIV, a
     OutOfVerticalSpace exception will be raised.
@@ -363,8 +502,9 @@ class div(box):
         spaces = []
         y = canvas.h()
         for kid in self:
-            spaces.append(t4.psg.drawing.box.canvas(canvas,
-                                                    0, 0, canvas.w(), y))
+            spaces.append(t4.psg.drawing.box.canvas(
+                canvas, 0, 0, canvas.w(), y,
+                comment="tmpcanvas from div.render()"))
             y, kidcursor = kid.render(spaces[-1], None)
             if kidcursor is not None:
                 # “kid” has not been rendered completely.
