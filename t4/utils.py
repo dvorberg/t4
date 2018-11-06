@@ -3,7 +3,7 @@
 
 ##  This file is part of the t4 Python module collection. 
 ##
-##  Copyright 2011 by Diedrich Vorberg <diedrich@tux4web.de>
+##  Copyright 2011–17 by Diedrich Vorberg <diedrich@tux4web.de>
 ##
 ##  All Rights Reserved
 ##
