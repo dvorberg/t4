@@ -157,6 +157,13 @@ class _container_node(_node):
     A common base class for the richtext (=root node) and the box
     type.
     """
+
+    # This is not needed here, but in child classes.
+    # It will be returned in cursors to indicated, that
+    # a canvas is not large enough for the object it should
+    # contain. 
+    out_of_space_marker = { "status": "out of space" }
+    
     def render(self, canvas, cursor=None):
         y = canvas.h()            
 
@@ -277,7 +284,54 @@ class box(_container_node):
             # Draw the background in the padding_canvas
 
         return _container_node.render(self, padding_canvas, cursor)
+
+class static_box(box):
+    """
+    This box contains an object with a known height.
+
+    You must implement the height() and draw() functions. The
+    height()-function is called once and its result cached for later
+    use.
+    """
+    def __init__(self, *children, **kw):
+        box.__init__(self, *children, **kw)
+        self._height = None
         
+    def height(self):
+        """
+        Return the height of the object to be drawn.
+        """
+        raise NotImplementedError()
+
+    def draw(self, canvas):
+        """
+        Draw the object on the `canvas`. 
+        """
+        raise NotImplementedError()
+
+    def render(self, canvas, cursor=None):
+        if self._height is None:
+            self._height = self.height()
+
+        y = canvas.h()
+        if y < self._height:
+            if cursor and \
+               cursor.get(id(self), None) == self.out_of_space_marker:
+                # Box too small, will never fit.
+                raise BoxTooSmall()
+            else:
+                # Not enough space in the current box.
+                return y, {id(self): self.out_of_space_marker,},
+        else:
+            space = t4.psg.drawing.box.canvas(canvas, 0, y-self._height,
+                                              canvas.w(), self._height)
+            canvas.append(space)
+            self.draw(space)
+            return y - self._height, None,
+
+        
+        
+    
 class null_box(box):
     def __init__(self):
         box.__init__(self)
@@ -305,7 +359,6 @@ class div(box):
         self.bastard_threshhold = kw.get("bastard_threshhold", 0.0)
         box.__init__(self, *children, **kw)
         
-    out_of_space_marker = { "status": "out of space" }
     def render(self, canvas, cursor=None):
         spaces = []
         y = canvas.h()

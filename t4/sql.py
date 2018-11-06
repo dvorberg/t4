@@ -637,7 +637,7 @@ class where(clause, expression):
     def and_(cls, *others):
         """
         OTHERS is a list of sql.where instances that are connected
-        using OR.
+        using AND.
         """
         others = filter(lambda o: o is not None, others)
         

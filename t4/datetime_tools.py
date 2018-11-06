@@ -159,7 +159,7 @@ german_date_re = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 def parse_german_date(s):
     match = german_date_re.match(s)
     if match is None:
-        raise ValueError("This doesn't seem to be a german date: " + repr(s))
+        raise ValueError("This doesn't seem to be a German date: " + repr(s))
     tpl = map(int, match.groups())
     d, m, y = tpl
     return datetime.date(y, m, d)
