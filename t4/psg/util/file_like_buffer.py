@@ -96,12 +96,6 @@ class file_like_buffer(list):
             if hasattr(a, "write_to"):
                 a.write_to(fp)
             else:
-                if hasattr(a, "tell") and a.tell() != 0:
-                    # Make sure the file pointer is at the beginning of the
-                    # file. Otherwise, when appending a file to a file like
-                    # buffer, str(a) will be "" when used more than once.
-                    raise IOError("Pointer not at beginning of file. "
-                                  "Need to fp.read() when adding?") 
                 fp.write(str(a))
                 
     def append(self, what):
@@ -140,13 +134,20 @@ class file_like_buffer(list):
 class file_as_buffer:
     def __init__(self, fp):
         self.fp = fp
+        self.filepointer = fp.tell()
 
     def write_to(self, fp):
-        #from t4.psg.util.misc import copy_linewise
-        #copy_linewise(self.fp, fp)
+        # Make sure the file pointer is at the desired position,
+        # that is, the one, we were initialized with.
+        self.fp.seek(self.filepointer)
+        
         while True:
             s = self.fp.read(1024)
             if s == "":
                 break
             else:
                 fp.write(s)
+
+    def as_string(self):
+        return self.fp.read()
+    
