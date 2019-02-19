@@ -96,6 +96,12 @@ class file_like_buffer(list):
             if hasattr(a, "write_to"):
                 a.write_to(fp)
             else:
+                if hasattr(a, "tell") and a.tell() != 0:
+                    # Make sure the file pointer is at the beginning of the
+                    # file. Otherwise, when appending a file to a file like
+                    # buffer, str(a) will be "" when used more than once.
+                    raise IOError("Pointer not at beginning of file. "
+                                  "Need to fp.read() when adding?") 
                 fp.write(str(a))
                 
     def append(self, what):
