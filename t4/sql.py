@@ -55,7 +55,7 @@ The way it works is best described by example::
 """
 __author__ = "Diedrich Vorberg <diedrich@tux4web.de>"
 
-import json, decimal
+import sys, json, decimal, warnings
 from string import *
 from types import *
 
@@ -594,6 +594,15 @@ class where(clause, expression):
     """
     rank = 1
 
+    def __init__(self,  *parts, **kw):
+        expression.__init__(self, *parts, **kw)
+
+        # What used to be classmethods a moment ago,
+        # are instancemethods now.
+        # This is whild trickery, I suppose.
+        self.and_ = self.and__
+        self.or_ = self.or__
+    
     def __sql__(self, runner):
         return "WHERE " + expression.__sql__(self, runner)
 
@@ -602,21 +611,33 @@ class where(clause, expression):
         Multiplying two where clauses connects them using OR (including
         parantheses). 
         """
-        return self.or_(self, other)
+        return self.or_(other)
 
     def __mul__(self, other):
         """
         Adding two where clauses connects them using AND (including
         parantheses)
         """
-        return self.and_(self, other)
+        return self.and_(other)
 
-    def or_(cls, *others):
+    def or__(cls, *others):
         """
         OTHERS is a list of sql.where instances that are connected
         using OR.
         """
         others = filter(lambda o: o is not None, others)
+
+        # If we’re called on the instance, we are the first part of the
+        # resulting expression.
+        if type(cls) == InstanceType:
+            if cls in others:
+                # Just in case I assumed the old classmetod-only usage
+                # I filter myself here.
+                warnings.warn("Fix sql.where.and_()/or_() usage!",
+                              DeprecationWarning)
+                print >> sys.stderr, "Fix sql.where.and_()/or_() usage!"
+            else:
+                others = (cls,) + others
         
         if len(others) < 1:
             raise ValueError("Empty input for or_()")
@@ -632,14 +653,26 @@ class where(clause, expression):
         del ret._parts[-1] # remove the last OR
 
         return ret
-    or_ = classmethod(or_)
+    or_ = classmethod(or__)
     
-    def and_(cls, *others):
+    def and__(cls, *others):
         """
         OTHERS is a list of sql.where instances that are connected
         using AND.
-        """
+        """        
         others = filter(lambda o: o is not None, others)
+
+        # If we’re called on the instance, we are the first part of the
+        # resulting expression.        
+        if type(cls) == InstanceType:
+            if cls in others:
+                # Just in case I assumed the old classmetod-only usage
+                # I filter myself here.
+                warnings.warn("Fix sql.where.and_()/or_() usage!",
+                              DeprecationWarning)
+                print >> sys.stderr, "Fix sql.where.and_()/or_() usage!" 
+            else:
+                others = (cls,) + others
         
         if len(others) < 1:
             raise ValueError("Empty input for and_()")
@@ -652,10 +685,10 @@ class where(clause, expression):
             ret._parts.append(")")
             ret._parts.append(" AND ")
             
-        del ret._parts[-1] # remove the last OR
+        del ret._parts[-1] # remove the last AND
 
         return ret
-    and_ = classmethod(and_)
+    and_ = classmethod(and__)
 
 class order_by(clause):
     """
