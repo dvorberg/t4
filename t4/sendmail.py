@@ -26,13 +26,16 @@
 ##  I have added a copy of the GPL in the file COPYING
 
 
-import sys, os, os.path as op, types, smtplib
+import sys, os, os.path as op, types, smtplib, socket
 from string import *
 
 from t4.res import email_re
 from t4.utils import run
 
-from ll.xist import xsc
+try:
+    from ll.xist import xsc
+except ImportError:
+    xsc = None
 
 from email import encoders
 from email.message import Message
@@ -109,7 +112,7 @@ def sendmail(from_name, from_email,
     verity_email_address(from_email)
     verity_email_address(to_email)
         
-    if isinstance(message, xsc.Node):
+    if xsc is not None and isinstance(message, xsc.Node):
         message = message.bytes(encoding=encoding)
         if text_subtype == "plain":
             text_subtype = "html"
@@ -145,17 +148,19 @@ def sendmail(from_name, from_email,
 
     composed = outer.as_string()
 
-    #s = smtplib.SMTP("localhost")
-    #s.sendmail(from_email, to_email, composed)
-    #for email in bcc: s.sendmail(from_email, email, composed)
-    #s.quit()
 
-    (stdout, stderr), exitcode = run(
-        ["/usr/sbin/sendmail",
-         "-f", from_email, # Set the envelope sender.
-         to_email] + bcc,
-        input=composed)
-    
-    if exitcode != 0: raise IOError(stderr)
+    if socket.gethostname().startswith("leela."):
+        s = smtplib.SMTP("hermes.tux4web.de")
+        s.sendmail(from_email, to_email, composed)
+        for email in bcc: s.sendmail(from_email, email, composed)
+        s.quit()
+    else:
+        (stdout, stderr), exitcode = run(
+            ["/usr/sbin/sendmail",
+             "-f", from_email, # Set the envelope sender.
+             to_email] + bcc,
+            input=composed)
+        
+        if exitcode != 0: raise IOError(stderr)
     
     
