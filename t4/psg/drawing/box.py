@@ -718,7 +718,7 @@ class eps_image(_eps_image):
            included
         @param document_level: Boolean indicating whether the EPS file shall
            be part of the document prolog and be referenced several times from 
-           within the document or if it shall be included where it is used
+           within the document, or if it shall be included where it is used
            for a single usage.
         """
         
@@ -731,7 +731,7 @@ class eps_image(_eps_image):
 
         if not isinstance(fp, subfile._subfile):
             fp = file_as_buffer(fp)
-            
+
         _eps_image.__init__(self, parent, fp,
                             bb, document_level,
                             border, clip, comment)
