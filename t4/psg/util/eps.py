@@ -28,10 +28,11 @@
 import re, subfile, struct
 from measure import bounding_box
 
-hires_bbre = re.compile(r"%%HiResBoundingBox: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?) "
-                        r"(\d+(?:\.\d+)?) (\d+(?:\.\d+)?)")
-bbre = re.compile(r"%%BoundingBox: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?) "
-                  r"(\d+(?:\.\d+)?) (\d+(?:\.\d+)?)")
+hires_bbre = re.compile(
+    r"%%HiResBoundingBox: (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) "
+    r"(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)")
+bbre = re.compile(r"%%BoundingBox: (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) "
+                  r"(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)")
 def get_eps_bb(fp_or_eps):
     """
     Provided EPS Source code, this function will return a pair of
